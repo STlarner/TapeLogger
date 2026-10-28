@@ -118,7 +118,7 @@ public struct TapeHTTPExchange: Sendable {
 extension TapeEntry {
     /// Plain text representation used by the copy button and by file export.
     public var copyText: String {
-        var text = "[\(level.label)] \(key.title) | \(TapeTimeFormatter.string(from: date))"
+        var text = "[\(heading)] | \(TapeTimeFormatter.string(from: date))"
         if let duration {
             text += " | \(duration.tapeMilliseconds)ms"
         }
@@ -146,5 +146,24 @@ extension TapeEntry {
             break
         }
         return text
+    }
+}
+
+extension TapeEntry {
+    /// The key title, or `nil` for the default `.log` key.
+    ///
+    /// The default key has nothing to say: printing "log" in front of every
+    /// entry that came from `Tape.info("...")` hides the level, which is the
+    /// only thing the reader actually needs. Renderers show the level instead
+    /// and add the key only when it carries information.
+    public var keyTitle: String? {
+        key.id == TapeKey.log.id ? nil : key.title
+    }
+
+    /// Level first, then the key when it says something: `debug` or
+    /// `error · http-request`.
+    public var heading: String {
+        guard let keyTitle else { return level.label }
+        return "\(level.label) · \(keyTitle)"
     }
 }

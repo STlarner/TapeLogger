@@ -22,7 +22,7 @@ struct TapeBoxRendererTests {
 
         #expect(lines.count == 4)
         #expect(lines[0].hasPrefix("┌"))
-        #expect(lines[1].hasPrefix("│ http-request |"))
+        #expect(lines[1].hasPrefix("│ info · http-request |"))
         #expect(lines[1].contains("584ms"))
         #expect(lines[2] == "│ [GET] https://example.com")
         #expect(lines[3].hasPrefix("└"))
@@ -39,7 +39,7 @@ struct TapeBoxRendererTests {
         let lines = output.split(separator: "\n", omittingEmptySubsequences: false)
 
         #expect(lines[0].hasPrefix("┌"))
-        #expect(lines[1].hasPrefix("│ 🟠 log |"))
+        #expect(lines[1].hasPrefix("│ 🟠 warning |"))
         #expect(!output.contains("\u{001B}"))
     }
 
@@ -109,5 +109,72 @@ struct TapeBoxRendererTests {
         )
 
         #expect(output.contains("│ key=feed, retry=3"))
+    }
+
+    @Test("The default key is not printed")
+    func defaultKeyIsSilent() {
+        let entry = TapeEntry(level: .debug, message: "x")
+
+        #expect(entry.keyTitle == nil)
+        #expect(entry.heading == "debug")
+    }
+
+    @Test("A custom key brings its own color and emoji")
+    func customKeyStyle() {
+        let key = TapeKey(
+            "payments",
+            level: .notice,
+            color: TapeColor(light: 0x1B8A3A, dark: 0x30D158, ansi: 40, emoji: "💳")
+        )
+        let entry = TapeEntry(level: .notice, key: key, message: "charged")
+
+        let output = TapeBoxRenderer().render(
+            entry,
+            context: TapeRenderContext(theme: .default, capabilities: .emoji)
+        )
+
+        #expect(output.contains("│ 💳 notice · payments |"))
+        #expect(TapeTheme.default.color(for: entry).emoji == "💳")
+    }
+
+    @Test("A theme override wins over the color the key carries")
+    func themeOverridesKey() {
+        var theme = TapeTheme.default
+        theme.keys["payments"] = TapeColor(
+            light: 0x000000,
+            dark: 0xFFFFFF,
+            ansi: 99,
+            emoji: "🏦"
+        )
+        let key = TapeKey(
+            "payments",
+            level: .notice,
+            color: TapeColor(light: 0x1B8A3A, dark: 0x30D158, ansi: 40, emoji: "💳")
+        )
+        let entry = TapeEntry(level: .notice, key: key, message: "charged")
+
+        let output = TapeBoxRenderer().render(
+            entry,
+            context: TapeRenderContext(theme: theme, capabilities: .emoji)
+        )
+
+        #expect(output.contains("│ 🏦 notice · payments |"))
+    }
+
+    @Test("A key color without emoji falls back to the level badge")
+    func keyWithoutEmoji() {
+        let key = TapeKey(
+            "payments",
+            level: .warning,
+            color: TapeColor(light: 0x000000, dark: 0xFFFFFF, ansi: 99)
+        )
+        let entry = TapeEntry(level: .warning, key: key, message: "charged")
+
+        let output = TapeBoxRenderer().render(
+            entry,
+            context: TapeRenderContext(theme: .default, capabilities: .emoji)
+        )
+
+        #expect(output.contains("│ 🟠 warning · payments |"))
     }
 }

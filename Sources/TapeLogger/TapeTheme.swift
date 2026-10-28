@@ -27,7 +27,8 @@ public struct TapeTheme: Sendable {
     public var text: TapeColor
     public var secondary: TapeColor
     public var levels: [TapeLevel: TapeColor]
-    /// Per-key override, e.g. `http-request` in magenta regardless of level.
+    /// Per-key override. Wins over the color the key carries itself, so an
+    /// app can rebrand a stream without touching the call sites.
     public var keys: [String: TapeColor]
 
     public init(
@@ -46,13 +47,20 @@ public struct TapeTheme: Sendable {
         self.keys = keys
     }
 
-    /// Key override wins over level, so adapters can brand their own stream.
+    /// Resolution order: theme override, then the color the key carries,
+    /// then the level color. A custom log type therefore needs no theme.
     public func color(for entry: TapeEntry) -> TapeColor {
-        keys[entry.key.id] ?? color(for: entry.level)
+        keys[entry.key.id] ?? entry.key.color ?? color(for: entry.level)
     }
 
     public func color(for level: TapeLevel) -> TapeColor {
         levels[level] ?? levels[.info] ?? TapeTheme.default.levels[.info]!
+    }
+
+    /// Badge for the console: the key color may omit an emoji, in which case
+    /// the level still provides one.
+    public func emoji(for entry: TapeEntry) -> String? {
+        color(for: entry).emoji ?? color(for: entry.level).emoji
     }
 }
 
@@ -72,12 +80,6 @@ extension TapeTheme {
             .critical: TapeColor(light: 0xB71C1C, dark: 0xFF375F, ansi: 197, emoji: "🟣"),
             .fault: TapeColor(light: 0x8E0000, dark: 0xD70015, ansi: 88, emoji: "⛔️"),
         ],
-        keys: [
-            TapeKey.httpRequest.id: TapeColor(light: 0xC218B5, dark: 0xF602C1, ansi: 200, emoji: "🟣"),
-            TapeKey.httpResponse.id: TapeColor(light: 0x1B8A3A, dark: 0x30D158, ansi: 40, emoji: "🟢"),
-            TapeKey.httpError.id: TapeColor(light: 0xD32F2F, dark: 0xFF453A, ansi: 203, emoji: "🔴"),
-            TapeKey.navigation.id: TapeColor(light: 0x7B1FA2, dark: 0xAF5FFF, ansi: 135, emoji: "🟪"),
-            TapeKey.storage.id: TapeColor(light: 0x00695C, dark: 0x64D2FF, ansi: 80, emoji: "🟦"),
-        ]
+        keys: [:]
     )
 }

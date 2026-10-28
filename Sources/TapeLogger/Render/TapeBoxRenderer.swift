@@ -27,7 +27,7 @@ public struct TapeBoxRenderer: TapeTextRenderer {
     public func render(_ entry: TapeEntry, context: TapeRenderContext) -> String {
         let color = context.theme.color(for: entry)
 
-        var header = "\(entry.key.title) | \(TapeTimeFormatter.string(from: entry.date))"
+        var header = "\(entry.heading) | \(TapeTimeFormatter.string(from: entry.date))"
         if let duration = entry.duration {
             header += " | \(duration.tapeMilliseconds)ms"
         }
@@ -35,7 +35,7 @@ public struct TapeBoxRenderer: TapeTextRenderer {
             header += " · \(source.short)"
         }
         if context.capabilities.mode == .emoji {
-            header = "\(color.emoji ?? "•") \(header)"
+            header = "\(context.theme.emoji(for: entry) ?? "•") \(header)"
         }
 
         let messageLines = entry.message.split(

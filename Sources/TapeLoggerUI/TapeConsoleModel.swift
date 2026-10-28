@@ -48,7 +48,7 @@ public final class TapeConsoleModel {
             guard !query.isEmpty else { return true }
 
             if entry.message.lowercased().contains(query) { return true }
-            if entry.key.title.lowercased().contains(query) { return true }
+            if entry.heading.lowercased().contains(query) { return true }
             if entry.source?.function.lowercased().contains(query) == true { return true }
             return entry.metadata.contains { key, value in
                 key.lowercased().contains(query) || value.description.lowercased().contains(query)

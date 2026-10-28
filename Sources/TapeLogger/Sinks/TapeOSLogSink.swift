@@ -24,7 +24,7 @@ public struct TapeOSLogSink: TapeSink {
 
         // `privacy:` only works on a literal interpolated into the log call,
         // so the string is composed first and then marked public here.
-        let text = "\(entry.key.title) | \(entry.message)"
+        let text = "\(entry.heading) | \(entry.message)"
         switch entry.level {
         case .trace: logger.trace("\(text, privacy: .public)")
         case .debug: logger.debug("\(text, privacy: .public)")

@@ -51,11 +51,17 @@ struct TapeStoreTests {
         #expect(received == ["first", "second"])
     }
 
-    @Test("Theme resolves a key override before the level color")
+    @Test("Theme resolves a key override before the key color and the level color")
     func themePriority() {
         let entry = TapeEntry(level: .info, key: .httpRequest, message: "GET")
 
-        #expect(TapeTheme.default.color(for: entry) == TapeTheme.default.keys[TapeKey.httpRequest.id])
+        #expect(TapeTheme.default.color(for: entry) == TapeKey.httpRequest.color)
+
+        var theme = TapeTheme.default
+        let override = TapeColor(light: 0x111111, dark: 0x222222, ansi: 111)
+        theme.keys[TapeKey.httpRequest.id] = override
+
+        #expect(theme.color(for: entry) == override)
         #expect(TapeTheme.default.color(for: .warning) == TapeTheme.default.levels[.warning])
     }
 }

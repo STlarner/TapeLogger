@@ -53,7 +53,7 @@ public struct TapeEntryCard: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Text(entry.key.title)
+            Text(entry.heading)
 
             Text(TapeTimeFormatter.shortString(from: entry.date))
                 .opacity(0.8)

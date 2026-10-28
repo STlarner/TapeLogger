@@ -11,7 +11,7 @@ Tape.error(error)
 
 ```
 ┌──────────────────────────────────────────────────
-│ 🟠 http-request | 21:30:34.584 | 584ms
+│ 🟣 info · http-request | 21:30:34.584 | 584ms
 │ GET https://jsonplaceholder.typicode.com/users/1
 └──────────────────────────────────────────────────
 ```
@@ -98,6 +98,49 @@ Use `Tape.log(...)` when the level and the key come from variables, and the
 `trace`/`debug`/`info`/`warning`/`error`/`critical`/`fault` helpers otherwise.
 `Tape.error(_:error:)` keeps the error description as an expandable
 attachment instead of appending it to the message.
+
+## Custom log types
+
+A key is a log type: give it a level and, if you want, its own color and
+emoji. No theme edit is needed, and the style follows the entry everywhere
+(console, unified log, in-app UI).
+
+```swift
+extension TapeKey {
+    static let payments = TapeKey(
+        "payments",
+        level: .notice,
+        color: TapeColor(light: 0x1B8A3A, dark: 0x30D158, ansi: 40, emoji: "💳")
+    )
+}
+
+Tape.notice("charged 12.00", key: .payments)
+```
+
+```
+┌────────────────────────────────────────
+│ 💳 notice · payments | 21:30:34.584
+│ charged 12.00
+└────────────────────────────────────────
+```
+
+The header always starts with the level, because that is the part you scan
+for; the key follows only when it says something (`Tape.info("...")` prints
+just `info`). Resolution order for the color is: theme override, then the
+color on the key, then the level color. A key color without an emoji keeps
+the level badge.
+
+To rebrand a stream across the app without touching call sites, override it
+in the theme:
+
+```swift
+var theme = TapeTheme.default
+theme.keys["payments"] = TapeColor(light: 0x0B6E99, dark: 0x64D2FF, ansi: 80, emoji: "🏦")
+```
+
+```swift
+TapeConsoleView(theme: theme)
+```
 
 ## UI
 
