@@ -40,11 +40,11 @@ even when the console renders every emoji the same:
 
 ## Console output
 
-Every box is exactly `TapeConsoleCapabilities.maxWidth` wide (110 characters
-by default, further capped to the terminal width when stdout is a terminal),
-so a run of entries lines up instead of looking like a ragged stack. Text that
-does not fit wraps on a space boundary and keeps the gutter; a single word
-wider than the box is hard-broken.
+Every box is exactly `TapeConsoleCapabilities.maxWidth` wide (77 characters by
+default, further capped to the terminal width when stdout is a terminal), so a
+run of entries lines up instead of looking like a ragged stack. Text that does
+not fit wraps on a space boundary and keeps the gutter; a single word wider
+than the box is hard-broken.
 
 ```swift
 TapeConsoleCapabilities(mode: .emoji, maxWidth: 72)
@@ -59,7 +59,7 @@ The boxes in this document are cropped for readability.
 ## Installation
 
 ```swift
-.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.8.0")
+.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.8.1")
 ```
 
 Products: `TapeLogger` (core, no dependencies) and `TapeLoggerUI` (SwiftUI).

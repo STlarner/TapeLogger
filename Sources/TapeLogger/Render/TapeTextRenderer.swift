@@ -15,9 +15,11 @@ public struct TapeConsoleCapabilities: Sendable, Hashable {
     public var mode: ColorMode
     /// Width of the console box in characters. Every box uses it, so a run
     /// of entries lines up; longer text wraps instead of widening the box.
+    /// The default leaves room for the Xcode console, which is usually
+    /// narrower than a maximized terminal.
     public var maxWidth: Int
 
-    public init(mode: ColorMode = .emoji, maxWidth: Int = 110) {
+    public init(mode: ColorMode = .emoji, maxWidth: Int = 77) {
         self.mode = mode
         self.maxWidth = maxWidth
     }
@@ -42,7 +44,7 @@ public struct TapeConsoleCapabilities: Sendable, Hashable {
         let isTTY = false
         #endif
         var capabilities = detect(environment: environment, isTerminal: isTTY)
-        if isTTY, let columns = terminalColumns(), columns >= 60 {
+        if isTTY, let columns = terminalColumns(), columns >= 40 {
             capabilities.maxWidth = min(capabilities.maxWidth, columns)
         }
         return capabilities

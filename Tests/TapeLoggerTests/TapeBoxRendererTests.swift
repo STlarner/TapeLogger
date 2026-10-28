@@ -178,6 +178,23 @@ struct TapeBoxRendererTests {
         #expect(output.contains("│ ⚠️ warning · payments |"))
     }
 
+    @Test("The default width fits the Xcode console")
+    func defaultWidth() {
+        let entry = TapeEntry(level: .info, message: "ok")
+        let context = TapeRenderContext(
+            theme: .default,
+            capabilities: TapeConsoleCapabilities(mode: .none)
+        )
+
+        let lines = TapeBoxRenderer().render(entry, context: context)
+            .split(separator: "\n")
+
+        #expect(context.capabilities.maxWidth == 77)
+        #expect(lines.first?.count == 77)
+        #expect(lines.last?.count == 77)
+        #expect(lines.allSatisfy { $0.count <= 77 })
+    }
+
     @Test("Every box has the same width, whatever the message")
     func fixedWidth() {
         let short = TapeEntry(level: .info, message: "ok")
