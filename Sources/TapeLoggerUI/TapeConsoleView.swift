@@ -10,6 +10,7 @@ public struct TapeConsoleView: View {
     @State private var model: TapeConsoleModel
     private let theme: TapeTheme
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
 
     public init(store: TapeStore = Tape.shared.store, theme: TapeTheme = .default) {
         _model = State(initialValue: TapeConsoleModel(store: store))
@@ -32,6 +33,14 @@ public struct TapeConsoleView: View {
             #endif
             .searchable(text: $model.searchText, prompt: "Search logs")
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Clear") { model.clear() }
                         .disabled(model.entries.isEmpty)
@@ -44,23 +53,47 @@ public struct TapeConsoleView: View {
     }
 
     private var list: some View {
-        ScrollView {
-            LazyVStack(spacing: 8) {
-                ForEach(model.visibleEntries) { entry in
-                    TapeEntryCard(entry: entry, theme: theme)
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    ForEach(model.visibleEntries) { entry in
+                        TapeEntryCard(entry: entry, theme: theme)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+            // Without this the console opens on the oldest entries, because
+            // the newest ones are appended at the bottom.
+            .onChange(of: model.visibleEntries.last?.id) { _, id in
+                scrollToBottom(proxy, id: id)
+            }
+            .onAppear {
+                scrollToBottom(proxy, id: model.visibleEntries.last?.id)
+            }
+            .overlay {
+                if model.visibleEntries.isEmpty {
+                    ContentUnavailableView(
+                        "No logs",
+                        systemImage: "text.alignleft",
+                        description: Text(
+                            model.entries.isEmpty
+                                ? "Logs will appear here."
+                                : "No entry matches the filter."
+                        )
+                    )
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
         }
-        .overlay {
-            if model.visibleEntries.isEmpty {
-                ContentUnavailableView(
-                    "No logs",
-                    systemImage: "text.alignleft",
-                    description: Text(model.entries.isEmpty ? "Logs will appear here." : "No entry matches the filter.")
-                )
-            }
+    }
+
+    private func scrollToBottom(
+        _ proxy: ScrollViewProxy,
+        id: TapeEntry.ID?
+    ) {
+        guard let id else { return }
+        withAnimation(.easeOut(duration: 0.15)) {
+            proxy.scrollTo(id, anchor: .bottom)
         }
     }
 
