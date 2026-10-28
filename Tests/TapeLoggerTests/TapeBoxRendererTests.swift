@@ -66,4 +66,20 @@ struct TapeBoxRendererTests {
         #expect(output.contains("│ line one"))
         #expect(output.contains("│ line two"))
     }
+
+    @Test("Metadata is rendered on a single sorted line")
+    func metadata() {
+        let entry = TapeEntry(
+            level: .warning,
+            message: "cache miss",
+            metadata: ["retry": 3, "key": "feed"]
+        )
+
+        let output = TapeBoxRenderer().render(
+            entry,
+            context: TapeRenderContext(theme: .default, capabilities: .plain)
+        )
+
+        #expect(output.contains("│ key=feed, retry=3"))
+    }
 }

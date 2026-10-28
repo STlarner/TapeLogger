@@ -37,6 +37,11 @@ public struct TapeBoxRenderer: TapeTextRenderer {
         var lines = ["│ " + header]
         lines.append(contentsOf: messageLines.map { "│ " + $0 })
 
+        let metadataLine = metadataSummary(entry)
+        if !metadataLine.isEmpty {
+            lines.append("│ " + metadataLine)
+        }
+
         let width = min(context.capabilities.maxWidth, lines.map(\.count).max() ?? 0)
         lines = lines.map { String($0.prefix(width)) }
 
@@ -57,5 +62,14 @@ public struct TapeBoxRenderer: TapeTextRenderer {
         }
 
         return block
+    }
+
+    /// `key=feed, retry=3` — greppable, one line, keys sorted.
+    private func metadataSummary(_ entry: TapeEntry) -> String {
+        guard !entry.metadata.isEmpty else { return "" }
+        return entry.metadata
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value.description)" }
+            .joined(separator: ", ")
     }
 }
