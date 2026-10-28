@@ -1,7 +1,7 @@
 # TapeLogger
 
-Logging per iOS che si vede: una console testuale colorata e una UI SwiftUI
-navigabile, dallo stesso modello dati.
+Logging for iOS that you can actually see: a colored console and a browsable
+SwiftUI console, rendered from the same data model.
 
 ```swift
 Tape.info("app launched")
@@ -15,54 +15,88 @@ Tape.error(error)
    └──────────────────────────────────────────────
 ```
 
-## Perché
+## Why
 
-La console di Xcode non supporta i codici ANSI: colorare il testo con escape
-codes lì non funziona (e può troncare la riga). Quindi la palette è semantica
-e ogni destinazione la degrada come può:
+Xcode's console does not support ANSI escape codes: coloring text with them
+there prints raw escape sequences (and can truncate the line). So the palette
+is semantic and every destination degrades it the best way it can:
 
-| Destinazione | Come appare |
+| Destination | How it looks |
 | --- | --- |
-| Terminale / CI | colore ANSI 256 |
-| Console Xcode | badge emoji |
-| UI in-app | colore pieno light/dark |
+| Terminal / CI | ANSI 256 color |
+| Xcode console | emoji badge |
+| In-app UI | full color, light and dark |
 
-## Installazione
+## Installation
 
 ```swift
-.package(url: "https://github.com/<owner>/TapeLogger.git", from: "0.1.0")
+.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.6.0")
 ```
 
-Product: `TapeLogger` (core, zero dipendenze) e `TapeLoggerUI` (SwiftUI).
+Products: `TapeLogger` (core, no dependencies) and `TapeLoggerUI` (SwiftUI).
 
-## Uso
+## Setup
 
 ```swift
 import TapeLogger
 
-// Livelli allineati a os.Logger: trace, debug, info, notice, warning, error, critical, fault
-Tape.debug("cache hit", metadata: ["key": "feed"])
-Tape.notice("session refreshed")
-
-// Chiavi: l'id è stabile (filtri, tema), il titolo è quello che si legge
-let payments = TapeKey("payments", title: "payments", level: .notice)
-Tape.log("charged", key: payments, metadata: ["amount": 19.99, "currency": "EUR"])
-
-// Durata misurata
-let users = try await Tape.measure("load users") { try await api.users() }
+@main
+struct App: App {
+    init() {
+        Tape.installRecommendedSinks(
+            subsystem: Bundle.main.bundleIdentifier ?? "com.example.app"
+        )
+    }
+}
 ```
 
-Sink aggiuntivi (console incluso di default):
+`installRecommendedSinks` picks the destinations for the current environment:
+
+- **Debug build** → console output only. ANSI colors in a terminal, emoji
+  badges in the Xcode console, which would print escape codes as garbage.
+- **Release build** → unified log only, so entries stay readable in
+  Console.app, Instruments and `log stream`.
+- **Debug build outside the Xcode console** (device launched from springboard,
+  CI) → both, since the emoji output would otherwise go nowhere.
+
+The unified log is skipped while the Xcode console is the destination: the
+same entry would show up twice, once as a box and once as a plain
+`subsystem:category` line. Build the sink list by hand if you want a different
+trade-off:
 
 ```swift
+Tape.shared.removeAllSinks()
+Tape.shared.addSink(TapeConsoleSink())
 Tape.shared.addSink(
     TapeOSLogSink(subsystem: "com.example.app", category: "app")
 )
 ```
 
-Inoltro al log unificato, così le entry restano visibili in Console.app e
-Instruments. Il verso opposto (catturare `os_log` di terzi) non è possibile
-su iOS: nessun framework pubblico espone il log unificato in lettura.
+Forwarding to the unified log works in one direction only: reading it back is
+not possible on iOS, no public framework exposes it.
+
+## Usage
+
+```swift
+import TapeLogger
+
+// Levels match os.Logger: trace, debug, info, notice, warning, error,
+// critical, fault.
+Tape.debug("cache hit", metadata: ["key": "feed"])
+Tape.notice("session refreshed")
+
+// Keys: the id is stable (filters, theming), the title is what you read.
+let payments = TapeKey("payments", title: "payments", level: .notice)
+Tape.log("charged", key: payments, metadata: ["amount": 19.99, "currency": "EUR"])
+
+// Measured duration.
+let users = try await Tape.measure("load users") { try await api.users() }
+```
+
+Use `Tape.log(...)` when the level and the key come from variables, and the
+`trace`/`debug`/`info`/`warning`/`error`/`critical`/`fault` helpers otherwise.
+`Tape.error(_:error:)` keeps the error description as an expandable
+attachment instead of appending it to the message.
 
 ## UI
 
@@ -77,17 +111,18 @@ WindowGroup {
 }
 ```
 
-`trigger` sceglie come si apre:
+`trigger` chooses how the console opens:
 
-- `.button` (default): bottone flottante in basso a destra.
-- `.shake`: shake del device, nessun elemento visibile. Funziona solo su
-  dispositivo fisico, il Simulator non ha il gesture.
-- `.none`: nessun trigger, presenti `TapeConsoleView()` tu.
+- `.button` (default): floating button in the bottom right corner.
+- `.shake`: shake the device, nothing visible on screen. Physical device only,
+  the Simulator has no such gesture.
+- `.none`: no trigger, present `TapeConsoleView()` yourself.
 
-C'è ricerca, filtro per livello e tap sulla card per espandere metadata,
-sorgente e allegati.
+The screen offers search, a filter per level and cards that expand to show
+metadata, source and attachments. It stays in sync with new entries and
+scrolls to the newest one when it opens.
 
-## Architettura
+## Architecture
 
 ```
 Tape.log ──► TapeEntry ──┬─► TapeStore ──► AsyncStream ──► TapeConsoleView
@@ -95,35 +130,36 @@ Tape.log ──► TapeEntry ──┬─► TapeStore ──► AsyncStream ─
                                           └─► TapeOSLogSink
 ```
 
-- **`TapeEntry`**: solo contenuto (livello, chiave, messaggio, metadata,
-  durata, allegato, sorgente). Non sa come verrà mostrato.
-- **`TapeSink`**: destinazione. `record` è sincrono e non blocca; viene
-  chiamato fuori dai lock, quindi può rientrare in `Tape` (protetto da un
-  guard thread-local contro la ricorsione).
-- **`TapeTextRenderer`**: trasforma un entry in testo.
-- **`TapeTheme`**: `levels` + override per `keys`; nessun colore hardcoded
-  nei renderer.
+- **`TapeEntry`**: content only (level, key, message, metadata, duration,
+  attachment, source). It does not know how it will be displayed.
+- **`TapeSink`**: destination. `record` is synchronous and must not block; it
+  is called outside the locks, so it may log again (a thread-local guard
+  prevents infinite recursion).
+- **`TapeTextRenderer`**: turns an entry into text.
+- **`TapeTheme`**: `levels` plus per-`key` overrides; renderers never hardcode
+  a color.
 
-Hot path: un unfair lock per entry, nessun actor e nessun task per log.
-Storia limitata (default 1000) e stream `.bufferingNewest(2000)`.
+Hot path: one unfair lock per entry, no actor and no task per log. History is
+bounded (1000 entries by default) and the stream uses
+`.bufferingNewest(2000)`.
 
-## Test
+## Tests
 
 ```bash
 swift test
 ```
 
-`Package.swift` dichiara `.macOS(.v14)` solo per poter eseguire i test in
-locale: il target supportato è iOS 17+.
+`Package.swift` declares `.macOS(.v14)` only so the tests can run locally: the
+supported target is iOS 17+.
 
 ## Roadmap
 
-- [ ] Filtro per chiave nella UI
-- [ ] Pausa / auto-scroll
-- [ ] Export (testo, JSON)
-- [ ] Adapter di rete (`Tape.session`), `TapeAdapter` per installazioni globali
-- [ ] Persistenza su file
+- [ ] Filter by key in the UI
+- [ ] Pause / freeze the list
+- [ ] Export (text, JSON)
+- [ ] Network adapter (`Tape.session`), `TapeAdapter` for global installs
+- [ ] File persistence
 
-## Licenza
+## License
 
-MIT — vedi [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

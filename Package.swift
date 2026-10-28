@@ -5,7 +5,7 @@ let package = Package(
     name: "TapeLogger",
     platforms: [
         .iOS(.v17),
-        .macOS(.v14), // solo per `swift test` in locale: il target è iOS
+        .macOS(.v14), // only so `swift test` can run locally: the target is iOS
     ],
     products: [
         .library(name: "TapeLogger", targets: ["TapeLogger"]),
