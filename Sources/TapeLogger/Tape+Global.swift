@@ -33,6 +33,15 @@ public extension Tape {
         )
     }
 
+    static func log(
+        _ customLog: some TapeLog,
+        file: String = #fileID,
+        function: String = #function,
+        line: Int = #line
+    ) {
+        shared.log(customLog, file: file, function: function, line: line)
+    }
+
     static func trace(
         _ message: String,
         key: TapeKey? = nil,

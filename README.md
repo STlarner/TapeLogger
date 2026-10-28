@@ -59,7 +59,7 @@ The boxes in this document are cropped for readability.
 ## Installation
 
 ```swift
-.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.8.1")
+.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.9.0")
 ```
 
 Products: `TapeLogger` (core, no dependencies) and `TapeLoggerUI` (SwiftUI).
@@ -114,60 +114,86 @@ import TapeLogger
 Tape.debug("cache hit", metadata: ["key": "feed"])
 Tape.notice("session refreshed")
 
-// Keys: the id is stable (filters, theming), the title is what you read.
-let payments = TapeKey("payments", title: "payments", level: .notice)
-Tape.log("charged", key: payments, metadata: ["amount": 19.99, "currency": "EUR"])
+// A custom log type brings its own header, level and color (see below).
+Tape.log(NavigationLog("Push RoomRoute"))
 
 // Measured duration.
 let users = try await Tape.measure("load users") { try await api.users() }
 ```
 
-Use `Tape.log(...)` when the level and the key come from variables, and the
-`trace`/`debug`/`info`/`warning`/`error`/`critical`/`fault` helpers otherwise.
+Use `Tape.log(...)` for a custom log type or when the level comes from a
+variable, and the `trace`/`debug`/`info`/`warning`/`error`/`critical`/`fault`
+helpers otherwise.
 `Tape.error(_:error:)` keeps the error description as an expandable
 attachment instead of appending it to the message.
 
 ## Custom log types
 
-A key is a log type: give it a level and, if you want, its own color and
-emoji. No theme edit is needed, and the style follows the entry everywhere
-(console, unified log, in-app UI).
+A log type is a struct that describes itself: header, level, color, badge.
+The same shape as a custom log class in talker, and the call site never names
+a level.
 
 ```swift
-extension TapeKey {
-    static let payments = TapeKey(
-        "payments",
-        level: .notice,
-        color: TapeColor(light: 0x1B8A3A, dark: 0x30D158, ansi: 40, emoji: "💳")
-    )
+struct NavigationLog: TapeLog {
+    let message: String
+
+    init(_ message: String) {
+        self.message = message
+    }
+
+    var title: String { "route" }
+    var level: TapeLevel { .debug }
+    var color: TapeColor? {
+        TapeColor(light: 0x7B1FA2, dark: 0xAF5FFF, ansi: 135, emoji: "🟪")
+    }
 }
 
-Tape.notice("charged 12.00", key: .payments)
+Tape.log(NavigationLog("Push RoomRoute"))
 ```
 
 ```
-┌────────────────────────────────────────
-│ 💳 notice · payments | 21:30:34.584
-│ charged 12.00
-└────────────────────────────────────────
+┌────────────────────────────────────────────────────────────────────────────
+│ 🟪 debug · route | 21:30:34.584
+│ Push RoomRoute
+└────────────────────────────────────────────────────────────────────────────
 ```
 
-The header always starts with the level, because that is the part you scan
-for; the key follows only when it says something (`Tape.info("...")` prints
-just `info`). Resolution order for the color is: theme override, then the
-color on the key, then the level color. A key color without an emoji keeps
-the level badge.
+Only `message` and `title` are required; `level` is `.info` by default and
+`color` falls back to the level color. `key` defaults to `title` and is the
+identity used for theme overrides and filtering.
 
-To rebrand a stream across the app without touching call sites, override it
-in the theme:
+A type can also carry its own severity, which is how a warning or an error
+keeps its level without giving up the header:
+
+```swift
+struct SyncLog: TapeLog {
+    let message: String
+    let level: TapeLevel
+    var title: String { "sync" }
+}
+
+Tape.log(SyncLog(message: "push failed", level: .error))
+```
+
+Because the entry keeps its key, one theme edit rebrands the stream across
+the app without touching call sites:
 
 ```swift
 var theme = TapeTheme.default
-theme.keys["payments"] = TapeColor(light: 0x0B6E99, dark: 0x64D2FF, ansi: 80, emoji: "🏦")
+theme.keys["route"] = TapeColor(light: 0x0B6E99, dark: 0x64D2FF, ansi: 80, emoji: "🧭")
 ```
 
 ```swift
 TapeConsoleView(theme: theme)
+```
+
+For one-off calls that do not deserve a type, the level helpers still accept
+a key, either one of the built-ins (`.httpRequest`, `.httpResponse`,
+`.httpError`, `.navigation`, `.storage`, `.lifecycle`) or your own:
+
+```swift
+let payments = TapeKey("payments", level: .notice)
+Tape.notice("charged 12.00", key: payments)
 ```
 
 ## UI

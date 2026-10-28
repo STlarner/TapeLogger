@@ -113,6 +113,31 @@ public final class Tape: Sendable {
         )
     }
 
+    /// Records a custom log type: the type brings its own header, level,
+    /// color and metadata, so the call site never names a level.
+    ///
+    /// ```swift
+    /// Tape.log(NavigationLog("Push RoomRoute"))
+    /// ```
+    public func log(
+        _ customLog: some TapeLog,
+        file: String = #fileID,
+        function: String = #function,
+        line: Int = #line
+    ) {
+        log(
+            customLog.message,
+            level: customLog.level,
+            key: customLog.tapeKey,
+            metadata: customLog.metadata,
+            duration: customLog.duration,
+            attachment: customLog.attachment,
+            file: file,
+            function: function,
+            line: line
+        )
+    }
+
     public func trace(_ message: String, key: TapeKey? = nil, metadata: [String: TapeValue] = [:],
                       file: String = #fileID, function: String = #function, line: Int = #line) {
         log(message, level: .trace, key: key, metadata: metadata, file: file, function: function, line: line)
