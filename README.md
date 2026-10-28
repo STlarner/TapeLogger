@@ -10,9 +10,10 @@ Tape.error(error)
 ```
 
 ```
-🟠 ┌ http-request | 21:30:34.584 | 584ms
-   │ GET https://jsonplaceholder.typicode.com/users/1
-   └──────────────────────────────────────────────
+┌──────────────────────────────────────────────────
+│ 🟠 http-request | 21:30:34.584 | 584ms
+│ GET https://jsonplaceholder.typicode.com/users/1
+└──────────────────────────────────────────────────
 ```
 
 ## Why

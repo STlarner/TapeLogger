@@ -3,14 +3,20 @@ import Foundation
 /// Talker-style box: one entry, one rectangle.
 ///
 /// ```
-/// 🟠 ┌ http-request | 21:30:34.584 | 584ms
-///    │ GET https://jsonplaceholder.typicode.com/users/1
-///    └──────────────────────────────────────────────
+/// ┌──────────────────────────────────────────────────
+/// │ 🟠 http-request | 21:30:34.584 | 584ms
+/// │ GET https://jsonplaceholder.typicode.com/users/1
+/// └──────────────────────────────────────────────────
 /// ```
 ///
 /// The box is deliberately open on the right: closing it requires padding
 /// to a fixed column, which breaks with wide characters and emoji. The UI
 /// draws a real border instead.
+///
+/// The level badge lives inside the header row, not before the border. An
+/// emoji glyph takes two terminal columns but counts as one `Character`, so
+/// prefixing the whole block shifts `┌` one column away from the `│` below
+/// it: the box stops lining up.
 public struct TapeBoxRenderer: TapeTextRenderer {
     public var showsSource: Bool
 
@@ -27,6 +33,9 @@ public struct TapeBoxRenderer: TapeTextRenderer {
         }
         if showsSource, let source = entry.source {
             header += " · \(source.short)"
+        }
+        if context.capabilities.mode == .emoji {
+            header = "\(color.emoji ?? "•") \(header)"
         }
 
         let messageLines = entry.message.split(
@@ -51,14 +60,8 @@ public struct TapeBoxRenderer: TapeTextRenderer {
                 + ["└" + String(repeating: "─", count: width)]
         ).joined(separator: "\n")
 
-        switch context.capabilities.mode {
-        case .ansi:
+        if context.capabilities.mode == .ansi {
             block = "\u{001B}[38;5;\(color.ansi)m" + block + "\u{001B}[0m"
-        case .emoji:
-            let badge = color.emoji ?? "•"
-            block = badge + " " + block.replacingOccurrences(of: "\n", with: "\n  ")
-        case .none:
-            break
         }
 
         return block

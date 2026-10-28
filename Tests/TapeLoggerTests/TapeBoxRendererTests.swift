@@ -28,7 +28,7 @@ struct TapeBoxRendererTests {
         #expect(lines[3].hasPrefix("└"))
     }
 
-    @Test("Emoji mode prefixes the block and indents the rest")
+    @Test("Emoji mode shows the badge inside the header")
     func emojiMode() {
         let entry = TapeEntry(level: .warning, message: "cache miss")
 
@@ -36,9 +36,37 @@ struct TapeBoxRendererTests {
             entry,
             context: TapeRenderContext(theme: .default, capabilities: .emoji)
         )
+        let lines = output.split(separator: "\n", omittingEmptySubsequences: false)
 
-        #expect(output.hasPrefix("🟠 ┌"))
-        #expect(output.contains("\n  │ log |"))
+        #expect(lines[0].hasPrefix("┌"))
+        #expect(lines[1].hasPrefix("│ 🟠 log |"))
+        #expect(!output.contains("\u{001B}"))
+    }
+
+    @Test("Every line starts in the first column", arguments: [TapeConsoleCapabilities.plain, .emoji, .ansi])
+    func leftEdgeAligned(capabilities: TapeConsoleCapabilities) {
+        let entry = TapeEntry(
+            level: .error,
+            key: .httpRequest,
+            message: "GET https://example.com\nsecond line",
+            metadata: ["retry": 3]
+        )
+
+        let output = TapeBoxRenderer().render(
+            entry,
+            context: TapeRenderContext(theme: .default, capabilities: capabilities)
+        )
+        let lines = output
+            .replacingOccurrences(
+                of: "\u{001B}\\[[0-9;]*m",
+                with: "",
+                options: .regularExpression
+            )
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { $0.hasPrefix("┌") || $0.hasPrefix("│") || $0.hasPrefix("└") }
+
+        #expect(lines.count == 6)
+        #expect(lines.allSatisfy { $0 })
     }
 
     @Test("ANSI mode wraps the block in escape codes")
