@@ -150,6 +150,16 @@ public final class Tape: Sendable {
         log(message, level: .error, key: key, metadata: metadata, file: file, function: function, line: line)
     }
 
+    /// Keeps the message short and the error details as an expandable
+    /// attachment, instead of flattening both into one line.
+    public func error(_ message: String, error: any Error, key: TapeKey? = nil,
+                      metadata: [String: TapeValue] = [:],
+                      file: String = #fileID, function: String = #function, line: Int = #line) {
+        let description = String(describing: error)
+        log(message, level: .error, key: key, metadata: metadata,
+            attachment: .error(description), file: file, function: function, line: line)
+    }
+
     public func critical(_ message: String, key: TapeKey? = nil, metadata: [String: TapeValue] = [:],
                          file: String = #fileID, function: String = #function, line: Int = #line) {
         log(message, level: .critical, key: key, metadata: metadata, file: file, function: function, line: line)
