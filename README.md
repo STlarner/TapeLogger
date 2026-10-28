@@ -72,13 +72,20 @@ import TapeLoggerUI
 WindowGroup {
     ContentView()
         #if DEBUG
-        .tapeConsole()   // bottone flottante + sheet
+        .tapeConsole(trigger: .shake)
         #endif
 }
 ```
 
-Oppure `TapeConsoleView()` dentro il tuo menu di debug. C'è ricerca, filtro
-per livello e tap sulla card per espandere metadata, sorgente e allegati.
+`trigger` sceglie come si apre:
+
+- `.button` (default): bottone flottante in basso a destra.
+- `.shake`: shake del device, nessun elemento visibile. Funziona solo su
+  dispositivo fisico, il Simulator non ha il gesture.
+- `.none`: nessun trigger, presenti `TapeConsoleView()` tu.
+
+C'è ricerca, filtro per livello e tap sulla card per espandere metadata,
+sorgente e allegati.
 
 ## Architettura
 
