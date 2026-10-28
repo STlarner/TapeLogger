@@ -28,10 +28,38 @@ is semantic and every destination degrades it the best way it can:
 | Xcode console | emoji badge |
 | In-app UI | full color, light and dark |
 
+The badge is a shape, not a colored circle, so levels stay distinguishable
+even when the console renders every emoji the same:
+
+| Level | Badge | Level | Badge |
+| --- | --- | --- | --- |
+| trace | 🔍 | warning | ⚠️ |
+| debug | 🐛 | error | ❌ |
+| info | ℹ️ | critical | 🔥 |
+| notice | 📣 | fault | 💀 |
+
+## Console output
+
+Every box is exactly `TapeConsoleCapabilities.maxWidth` wide (110 characters
+by default, further capped to the terminal width when stdout is a terminal),
+so a run of entries lines up instead of looking like a ragged stack. Text that
+does not fit wraps on a space boundary and keeps the gutter; a single word
+wider than the box is hard-broken.
+
+```swift
+TapeConsoleCapabilities(mode: .emoji, maxWidth: 72)
+```
+
+The right edge stays open on purpose: closing it would require counting
+terminal columns, which breaks as soon as a message contains a wide character
+or an emoji. The in-app UI draws a full border instead.
+
+The boxes in this document are cropped for readability.
+
 ## Installation
 
 ```swift
-.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.6.0")
+.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.8.0")
 ```
 
 Products: `TapeLogger` (core, no dependencies) and `TapeLoggerUI` (SwiftUI).

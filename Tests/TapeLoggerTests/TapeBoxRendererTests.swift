@@ -39,7 +39,7 @@ struct TapeBoxRendererTests {
         let lines = output.split(separator: "\n", omittingEmptySubsequences: false)
 
         #expect(lines[0].hasPrefix("┌"))
-        #expect(lines[1].hasPrefix("│ 🟠 warning |"))
+        #expect(lines[1].hasPrefix("│ ⚠️ warning |"))
         #expect(!output.contains("\u{001B}"))
     }
 
@@ -175,6 +175,76 @@ struct TapeBoxRendererTests {
             context: TapeRenderContext(theme: .default, capabilities: .emoji)
         )
 
-        #expect(output.contains("│ 🟠 warning · payments |"))
+        #expect(output.contains("│ ⚠️ warning · payments |"))
+    }
+
+    @Test("Every box has the same width, whatever the message")
+    func fixedWidth() {
+        let short = TapeEntry(level: .info, message: "ok")
+        let long = TapeEntry(
+            level: .info,
+            message: String(repeating: "word ", count: 80)
+        )
+        let context = TapeRenderContext(
+            theme: .default,
+            capabilities: TapeConsoleCapabilities(mode: .none, maxWidth: 40)
+        )
+
+        let shortLines = TapeBoxRenderer().render(short, context: context)
+            .split(separator: "\n")
+        let longLines = TapeBoxRenderer().render(long, context: context)
+            .split(separator: "\n")
+
+        #expect(shortLines.first?.count == 40)
+        #expect(shortLines.last?.count == 40)
+        #expect(longLines.first?.count == 40)
+        #expect(longLines.last?.count == 40)
+        #expect(longLines.allSatisfy { $0.count <= 40 })
+    }
+
+    @Test("Long text wraps on spaces and keeps the gutter")
+    func wrapsOnSpaces() {
+        let message = "the quick brown fox jumps over the lazy dog again"
+        let entry = TapeEntry(level: .info, message: message)
+        let capabilities = TapeConsoleCapabilities(mode: .none, maxWidth: 30)
+
+        let lines = TapeBoxRenderer()
+            .render(entry, context: TapeRenderContext(capabilities: capabilities))
+            .split(separator: "\n", omittingEmptySubsequences: false)
+
+        #expect(lines.count > 3)
+        #expect(lines.allSatisfy { $0.count <= 30 })
+        #expect(lines.dropFirst().dropLast().allSatisfy { $0.hasPrefix("│ ") })
+        #expect(
+            lines.dropFirst(2).dropLast().map { $0.dropFirst(2) }
+                .joined(separator: " ") == message
+        )
+    }
+
+    @Test("A word wider than the box is hard-broken")
+    func hardBreak() {
+        let url = String(repeating: "a", count: 60)
+
+        #expect(
+            TapeBoxRenderer.wrap(url, width: 20)
+                == [
+                    String(repeating: "a", count: 20),
+                    String(repeating: "a", count: 20),
+                    String(repeating: "a", count: 20),
+                ]
+        )
+    }
+
+    @Test("The box never gets narrower than the minimum")
+    func minimumWidth() {
+        let entry = TapeEntry(level: .info, message: "ok")
+        let capabilities = TapeConsoleCapabilities(mode: .none, maxWidth: 5)
+
+        let first = TapeBoxRenderer()
+            .render(entry, context: TapeRenderContext(capabilities: capabilities))
+            .split(separator: "\n")
+            .first
+
+        #expect(first?.count == TapeBoxRenderer.minimumWidth)
     }
 }

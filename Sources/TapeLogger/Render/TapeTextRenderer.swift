@@ -13,6 +13,8 @@ public struct TapeConsoleCapabilities: Sendable, Hashable {
     }
 
     public var mode: ColorMode
+    /// Width of the console box in characters. Every box uses it, so a run
+    /// of entries lines up; longer text wraps instead of widening the box.
     public var maxWidth: Int
 
     public init(mode: ColorMode = .emoji, maxWidth: Int = 110) {
@@ -28,6 +30,9 @@ public struct TapeConsoleCapabilities: Sendable, Hashable {
     /// console. Xcode runs the app behind a pseudo terminal, so `isatty`
     /// returns true and `TERM` is set, but the console does not interpret
     /// escape codes: emitting them prints raw `[38;5;75m` noise.
+    ///
+    /// When stdout *is* a terminal, its width caps `maxWidth`: a box wider
+    /// than the console would wrap and lose its alignment.
     public static func detect(
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> TapeConsoleCapabilities {
@@ -36,7 +41,22 @@ public struct TapeConsoleCapabilities: Sendable, Hashable {
         #else
         let isTTY = false
         #endif
-        return detect(environment: environment, isTerminal: isTTY)
+        var capabilities = detect(environment: environment, isTerminal: isTTY)
+        if isTTY, let columns = terminalColumns(), columns >= 60 {
+            capabilities.maxWidth = min(capabilities.maxWidth, columns)
+        }
+        return capabilities
+    }
+
+    /// Columns of the terminal attached to stdout, when it reports them.
+    static func terminalColumns() -> Int? {
+        #if canImport(Darwin)
+        var size = winsize()
+        guard ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == 0 else { return nil }
+        return Int(size.ws_col)
+        #else
+        return nil
+        #endif
     }
 
     static func detect(

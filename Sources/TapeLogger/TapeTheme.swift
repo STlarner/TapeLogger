@@ -71,14 +71,14 @@ extension TapeTheme {
         text: TapeColor(light: 0x1C1C1E, dark: 0xFFFFFF, ansi: 255),
         secondary: TapeColor(light: 0x6C6C70, dark: 0x8E8E93, ansi: 245),
         levels: [
-            .trace: TapeColor(light: 0x8E8E93, dark: 0x8E8E93, ansi: 245, emoji: "⚪️"),
-            .debug: TapeColor(light: 0x8E8E93, dark: 0x98989D, ansi: 245, emoji: "🔘"),
-            .info: TapeColor(light: 0x1976D2, dark: 0x42A5F5, ansi: 75, emoji: "🔵"),
-            .notice: TapeColor(light: 0x1B8A3A, dark: 0x30D158, ansi: 40, emoji: "🟢"),
-            .warning: TapeColor(light: 0xC25E00, dark: 0xFF9F0A, ansi: 214, emoji: "🟠"),
-            .error: TapeColor(light: 0xD32F2F, dark: 0xFF453A, ansi: 203, emoji: "🔴"),
-            .critical: TapeColor(light: 0xB71C1C, dark: 0xFF375F, ansi: 197, emoji: "🟣"),
-            .fault: TapeColor(light: 0x8E0000, dark: 0xD70015, ansi: 88, emoji: "⛔️"),
+            .trace: TapeColor(light: 0x8E8E93, dark: 0x8E8E93, ansi: 245, emoji: "🔍"),
+            .debug: TapeColor(light: 0x8E8E93, dark: 0x98989D, ansi: 245, emoji: "🐛"),
+            .info: TapeColor(light: 0x1976D2, dark: 0x42A5F5, ansi: 75, emoji: "ℹ️"),
+            .notice: TapeColor(light: 0x1B8A3A, dark: 0x30D158, ansi: 40, emoji: "📣"),
+            .warning: TapeColor(light: 0xC25E00, dark: 0xFF9F0A, ansi: 214, emoji: "⚠️"),
+            .error: TapeColor(light: 0xD32F2F, dark: 0xFF453A, ansi: 203, emoji: "❌"),
+            .critical: TapeColor(light: 0xB71C1C, dark: 0xFF375F, ansi: 197, emoji: "🔥"),
+            .fault: TapeColor(light: 0x8E0000, dark: 0xD70015, ansi: 88, emoji: "💀"),
         ],
         keys: [:]
     )
