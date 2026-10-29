@@ -23,12 +23,18 @@ import Foundation
 /// prefixing the whole block shifts `┌` one column away from the `│` below
 /// it: the box stops lining up.
 public struct TapeBoxRenderer: TapeTextRenderer {
+    /// Whether the header includes the entry's short source location.
     public var showsSource: Bool
 
+    /// Creates a renderer; source locations are hidden by default.
+    /// - Parameter showsSource: Include file name and line in the header.
     public init(showsSource: Bool = false) {
         self.showsSource = showsSource
     }
 
+    /// Formats all attachments and sorted metadata into an open-right box.
+    /// Payload controls are escaped and physical lines normalized before
+    /// display-column wrapping. Original entry content is not modified.
     public func render(_ entry: TapeEntry, context: TapeRenderContext) -> String {
         let color = context.theme.color(for: entry)
         let width = max(Self.minimumWidth, context.capabilities.maxWidth)

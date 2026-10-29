@@ -29,6 +29,7 @@ public enum TapeTimeFormatter {
     }
 }
 
+/// Adds overflow-safe whole-millisecond formatting to Swift durations.
 extension Duration {
     /// Whole milliseconds, for the `584ms` badge. Values outside `Int`'s
     /// range saturate at its bounds instead of trapping during rendering.

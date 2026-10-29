@@ -10,10 +10,14 @@ import TapeLogger
 @MainActor
 @Observable
 public final class TapeConsoleModel {
+    /// Retained UI history before search and level filtering, in append order.
     public private(set) var entries: [TapeEntry] = []
+    /// Case-insensitive substring query; surrounding whitespace is ignored.
     public var searchText: String = ""
+    /// Included severities; initially every level.
     public var selectedLevels: Set<TapeLevel> = Set(TapeLevel.allCases)
 
+    /// Positive maximum retained by this model, independent of store capacity.
     public let maxEntries: Int
     private let store: TapeStore
 
@@ -22,6 +26,11 @@ public final class TapeConsoleModel {
     private var consumptionID: UUID?
     private var generation: UUID?
 
+    /// Creates a model with a history snapshot. Call `consume` to observe updates.
+    ///
+    /// - Parameters:
+    ///   - store: History source, usually the logger's store.
+    ///   - maxEntries: Positive UI retention limit; defaults to 1000.
     public init(store: TapeStore = Tape.shared.store, maxEntries: Int = 1000) {
         precondition(maxEntries > 0, "maxEntries must be positive")
         self.store = store
@@ -31,6 +40,9 @@ public final class TapeConsoleModel {
 
     /// Consumes the store stream until the surrounding task is cancelled.
     /// Call it from `.task { }` so it stops when the screen disappears.
+    /// Refreshes the initial snapshot atomically with subscription, coalesces
+    /// updates for about 50 ms, and supersedes any previous consumer on this model.
+    /// Slow consumers may miss streamed entries when the store buffer overflows.
     public func consume() async {
         let id = UUID()
         consumptionID = id
@@ -63,11 +75,15 @@ public final class TapeConsoleModel {
         }
     }
 
+    /// Clears the shared store and this model, invalidating pre-clear buffers.
+    /// Other consuming consoles observe the reset as they process updates.
     public func clear() {
         store.clear()
         reset(to: store.generation)
     }
 
+    /// Entries matching selected levels and search text. Search includes copy
+    /// text, attachment contents, metadata, source file and function names.
     public var visibleEntries: [TapeEntry] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 

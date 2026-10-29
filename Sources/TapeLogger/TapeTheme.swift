@@ -1,17 +1,29 @@
 import Foundation
 
-/// A color that knows how to present itself everywhere it may end up.
+/// One semantic color with light, dark, terminal and optional badge variants.
 ///
-/// Xcode's debug console strips ANSI escape codes, so `ansi` alone is not
-/// enough: `emoji` is the fallback that survives Xcode, and `light`/`dark`
-/// are used by SwiftUI.
+/// ```swift
+/// let cacheColor = TapeColor(
+///     light: 0x00796B, dark: 0x64D2FF, ansi: 80, emoji: "💾"
+/// )
+/// ```
 public struct TapeColor: Sendable, Hashable {
+    /// Light-appearance RGB value, encoded as `0xRRGGBB` without alpha.
     public var light: UInt32
+    /// Dark-appearance RGB value, encoded as `0xRRGGBB` without alpha.
     public var dark: UInt32
     /// xterm-256 palette index, used in `.ansi` mode.
     public var ansi: UInt8
+    /// Optional console badge; absent key badges fall back to the level badge.
     public var emoji: String?
 
+    /// Creates a semantic color. RGB values use their lowest 24 bits.
+    ///
+    /// - Parameters:
+    ///   - light: Light-appearance RGB value.
+    ///   - dark: Dark-appearance RGB value.
+    ///   - ansi: Index in the terminal's 256-color palette.
+    ///   - emoji: Optional textual console badge.
     public init(light: UInt32, dark: UInt32, ansi: UInt8, emoji: String? = nil) {
         self.light = light
         self.dark = dark
@@ -22,15 +34,29 @@ public struct TapeColor: Sendable, Hashable {
 
 /// Semantic palette. Renderers never hardcode a color: they ask the theme.
 public struct TapeTheme: Sendable {
+    /// Background behind the console's entry cards.
     public var background: TapeColor
+    /// Entry-card background.
     public var card: TapeColor
+    /// Primary message and detail text color.
     public var text: TapeColor
+    /// Supporting labels, source text and inactive controls.
     public var secondary: TapeColor
+    /// Colors by severity. Missing levels fall back to the info color.
     public var levels: [TapeLevel: TapeColor]
     /// Per-key override. Wins over the color the key carries itself, so an
     /// app can rebrand a stream without touching the call sites.
     public var keys: [String: TapeColor]
 
+    /// Builds a palette. Start from `TapeTheme.default` for selective overrides.
+    ///
+    /// - Parameters:
+    ///   - background: Console background.
+    ///   - card: Entry-card background.
+    ///   - text: Primary content color.
+    ///   - secondary: Supporting content color.
+    ///   - levels: Severity palette; absent info falls back to the default theme.
+    ///   - keys: Overrides indexed by category identity, empty by default.
     public init(
         background: TapeColor,
         card: TapeColor,
@@ -53,6 +79,8 @@ public struct TapeTheme: Sendable {
         keys[entry.key.id] ?? entry.key.color ?? color(for: entry.level)
     }
 
+    /// Resolves a severity color, falling back to this palette's info color,
+    /// then the default palette's info color when necessary.
     public func color(for level: TapeLevel) -> TapeColor {
         levels[level] ?? levels[.info] ?? TapeTheme.default.levels[.info]!
     }
@@ -65,6 +93,7 @@ public struct TapeTheme: Sendable {
 }
 
 extension TapeTheme {
+    /// Built-in light/dark palette, severity badges and terminal colors.
     public static let `default` = TapeTheme(
         background: TapeColor(light: 0xF2F2F7, dark: 0x1C1C1E, ansi: 235),
         card: TapeColor(light: 0xFFFFFF, dark: 0x2C2C2E, ansi: 236),

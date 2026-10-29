@@ -8,7 +8,9 @@ import os
 /// never blocks and ordering matters; user callbacks are never invoked
 /// with the lock held.
 public final class TapeStore: Sendable {
+    /// Maximum retained entries; must be positive.
     public let capacity: Int
+    /// Maximum newest entries buffered independently for each stream subscriber.
     public let streamBufferSize: Int
 
     package enum Event: Sendable {
@@ -25,6 +27,14 @@ public final class TapeStore: Sendable {
 
     private let state: OSAllocatedUnfairLock<State>
 
+    /// Creates bounded history independent of any logger or UI.
+    ///
+    /// ```swift
+    /// let store = TapeStore(capacity: 500, streamBufferSize: 1000)
+    /// let logger = Tape(sinks: [], store: store)
+    /// logger.info("Retained in custom history")
+    /// ```
+    ///
     /// - Parameters:
     ///   - capacity: maximum retained entries. Old entries are dropped in
     ///     chunks so the hot path stays amortized O(1).
@@ -38,6 +48,9 @@ public final class TapeStore: Sendable {
         self.state = OSAllocatedUnfairLock(initialState: State())
     }
 
+    /// Retains and broadcasts an entry without logger severity filtering.
+    /// Overflow trims oldest entries in chunks, so retained count may fall
+    /// below capacity. Calls are thread-safe and observers receive append order.
     public func append(_ entry: TapeEntry) {
         state.withLock { state in
             state.entries.append(entry)
@@ -59,11 +72,14 @@ public final class TapeStore: Sendable {
         }
     }
 
-    /// A snapshot copy, safe to hand to the UI.
+    /// Returns retained entries in append order as a snapshot safe to share.
     public func snapshot() -> [TapeEntry] {
         state.withLock { $0.entries }
     }
 
+    /// Clears retained history and resets subscribed consoles. The public
+    /// entry-only stream keeps already-buffered entries and emits no reset;
+    /// it remains subscribed for subsequent appends.
     public func clear() {
         state.withLock { state in
             state.entries.removeAll()
@@ -76,12 +92,17 @@ public final class TapeStore: Sendable {
 
     package var generation: UUID { state.withLock { $0.generation } }
 
+    /// Current retained entry count, never greater than `capacity`.
     public var count: Int {
         state.withLock { $0.entries.count }
     }
 
     /// New stream per subscriber. Cancelling the consuming task terminates
     /// the stream and unregisters the continuation.
+    /// It receives future appends only, not a history replay. Slow consumers
+    /// lose their oldest buffered entries. The stream does not finish when the
+    /// store is cleared; cancel its consuming task when observation is no longer
+    /// needed. A separate snapshot plus subscription is not an atomic operation.
     public var stream: AsyncStream<TapeEntry> {
         AsyncStream(bufferingPolicy: .bufferingNewest(streamBufferSize)) { continuation in
             let id = UUID()

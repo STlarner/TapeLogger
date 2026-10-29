@@ -8,6 +8,9 @@ navigation event happened before an error—all in the same log history.
 
 **Swift 6 · iOS 17+ · No third-party dependencies · MIT**
 
+**[API reference](https://stlarner.github.io/TapeLogger/api/)** — generated
+from source comments on `main`, including APIs not yet released.
+
 <table>
   <tr>
     <th>Console · Light</th>
@@ -190,7 +193,7 @@ whole exchange. Body previews are opt-in and size-limited; sensitive headers
 and common credential query parameters are redacted.
 
 Use body previews with test data: body contents are not automatically
-redacted. See the [network setup, privacy and request scope](docs/Guide.md#urlsession)
+redacted. See the [network setup, privacy and request scope](https://stlarner.github.io/TapeLogger/api/documentation/tapelogger/usageguide#URLSession)
 before connecting a session with custom transport or authentication needs.
 
 ### Navigation and lifecycle events
@@ -218,8 +221,8 @@ struct NavigationExample: View {
 ```
 
 Pushes, pops, path resets and scene changes appear alongside your other logs.
-UIKit apps can use the [navigation](docs/Guide.md#uikit-navigation) and
-[app lifecycle](docs/Guide.md#ownership-and-app-lifecycle) adapters.
+UIKit apps can use the [navigation](https://stlarner.github.io/TapeLogger/api/documentation/tapeloggeradapters/tapenavigationadapter) and
+[app lifecycle](https://stlarner.github.io/TapeLogger/api/documentation/tapeloggeradapters/tapelifecycleadapter) adapters.
 
 ### Custom log types
 
@@ -284,9 +287,11 @@ example app, not an extra dependency in your project.
 
 ## Documentation
 
-- [Configuration, themes and output destinations](docs/Guide.md)
-- [Console delivery, flushing and unified-log privacy](docs/Guide.md#output-delivery-and-privacy-v0100)
-- [Adapter setup and supported capture scope](docs/Guide.md#automatic-event-sources)
+- [Full API reference](https://stlarner.github.io/TapeLogger/api/)
+- [Configuration, themes and output destinations](https://stlarner.github.io/TapeLogger/api/documentation/tapelogger/usageguide)
+- [Console delivery, flushing and unified-log privacy](https://stlarner.github.io/TapeLogger/api/documentation/tapelogger/usageguide#Output-delivery-and-privacy)
+- [Adapter setup and supported capture scope](https://stlarner.github.io/TapeLogger/api/documentation/tapeloggeradapters)
+- [Documentation builds and contribution policy](docs/Documentation.md)
 - [Build, test and refresh the screenshots](docs/Screenshots.md)
 - [Roadmap](ROADMAP.md)
 

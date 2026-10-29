@@ -128,11 +128,12 @@ than a wrapper at every call site. No separate Alamofire product or monitor.
 
 ## 6. Project plumbing
 
-- [ ] GitHub Actions: `swift test` on macOS, `TapeLoggerUI` build for iOS,
-      demo build. Keep it single-workflow and fast.
-- [ ] DocC catalog for `TapeLogger` with articles mirroring the README
-      sections: setup, custom log types, console capabilities.
-- [ ] Screenshots in the README (console in light/dark, demo app).
+- [x] GitHub Actions: macOS tests, iOS documentation builds, comment coverage,
+      compiled documentation examples and GitHub Pages deployment on `main`.
+- [ ] Add automated demo builds and iOS test execution to CI.
+- [x] DocC catalogs for all three modules, with source-generated API reference
+      and a single maintained usage guide under `/TapeLogger/api/`.
+- [x] Screenshots in the README (light/dark console and expanded HTTP card).
 
 ## Non-goals
 

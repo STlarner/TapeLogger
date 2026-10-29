@@ -8,8 +8,9 @@ import UIKit
 /// No launch or termination is inferred: iOS can kill an app without sending
 /// a notification. Use `tapeSceneLifecycle` for a SwiftUI scene's state.
 ///
-/// ```swift
-/// let lifecycle = TapeLifecycleAdapter()
+    /// ```swift
+    /// let adapters = TapeAdapters()
+    /// let lifecycle = TapeLifecycleAdapter()
 /// try adapters.install(lifecycle)
 /// ```
 @MainActor
@@ -18,6 +19,11 @@ public final class TapeLifecycleAdapter: TapeAdapter {
     private let center: NotificationCenter
     private let observations = Observations()
 
+    /// Creates an inactive application-notification observer.
+    ///
+    /// - Parameters:
+    ///   - tape: Logger receiving lifecycle entries; defaults to shared.
+    ///   - notificationCenter: Source of UIKit app notifications.
     public init(
         tape: Tape = .shared,
         notificationCenter: NotificationCenter = .default
@@ -26,6 +32,8 @@ public final class TapeLifecycleAdapter: TapeAdapter {
         center = notificationCenter
     }
 
+    /// Observes foreground, background, active and inactive transitions at debug
+    /// severity with `scope: app`. Repeated installation is a no-op.
     public func install() {
         guard observations.tokens.isEmpty else { return }
         let events: [(Notification.Name, String)] = [
@@ -48,6 +56,7 @@ public final class TapeLifecycleAdapter: TapeAdapter {
         }
     }
 
+    /// Removes all installed notification observers without clearing history.
     public func uninstall() {
         observations.removeAll()
     }

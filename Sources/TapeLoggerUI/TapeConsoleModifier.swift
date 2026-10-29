@@ -5,11 +5,11 @@ import TapeLogger
 /// nothing at all.
 ///
 /// ```swift
-/// WindowGroup {
-///     ContentView()
-///         #if DEBUG
-///         .tapeConsole(trigger: .button)
-///         #endif
+/// struct DebugRoot: View {
+///     var body: some View {
+///         Text("Example")
+///             .tapeConsole(trigger: .button)
+///     }
 /// }
 /// ```
 public struct TapeConsoleModifier: ViewModifier {
@@ -19,12 +19,19 @@ public struct TapeConsoleModifier: ViewModifier {
 
     @State private var isPresented = false
 
+    /// Creates a console presenter; prefer the `tapeConsole` view convenience.
+    ///
+    /// - Parameters:
+    ///   - store: History presented in the sheet.
+    ///   - theme: Palette for the trigger and console.
+    ///   - trigger: How the sheet is opened; none installs no visible trigger.
     public init(store: TapeStore, theme: TapeTheme, trigger: TapeConsoleTrigger) {
         self.store = store
         self.theme = theme
         self.trigger = trigger
     }
 
+    /// Adds the selected trigger and a console sheet without changing the content.
     public func body(content: Content) -> some View {
         content
             .overlay {
@@ -55,6 +62,7 @@ public struct TapeConsoleModifier: ViewModifier {
     }
 }
 
+/// Adds optional console presentation to any SwiftUI view.
 public extension View {
     /// Installs the in-app console.
     /// - Parameters:

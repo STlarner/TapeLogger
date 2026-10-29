@@ -7,12 +7,20 @@ import TapeLogger
 /// color so long payloads remain readable, unlike talker's all-colored card.
 @MainActor
 public struct TapeEntryCard: View {
+    /// Immutable content presented by this card.
     public let entry: TapeEntry
+    /// Palette used for message text, details, header and border.
     public var theme: TapeTheme
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var isExpanded: Bool
 
+    /// Creates an expandable card. Expansion is local view state, not entry data.
+    ///
+    /// - Parameters:
+    ///   - entry: Log content to display and copy.
+    ///   - theme: Presentation palette; defaults to the built-in theme.
+    ///   - initiallyExpanded: Initial detail visibility; defaults to collapsed.
     public init(entry: TapeEntry, theme: TapeTheme = .default, initiallyExpanded: Bool = false) {
         self.entry = entry
         self.theme = theme
@@ -23,6 +31,7 @@ public struct TapeEntryCard: View {
         theme.color(for: entry).color(for: colorScheme)
     }
 
+    /// Summary and optional details, with a copy action using the full copy text.
     public var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             header

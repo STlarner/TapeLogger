@@ -86,5 +86,6 @@ xcodebuild -scheme TapeLoggerUI \
   -destination 'generic/platform=iOS Simulator' build
 ```
 
-See the [guide](Guide.md#tests) for platform-specific test coverage and the
+See the [guide](https://stlarner.github.io/TapeLogger/api/documentation/tapelogger/usageguide#Tests)
+for platform-specific test coverage and the
 [roadmap](../ROADMAP.md) for upcoming work.

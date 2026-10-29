@@ -9,12 +9,25 @@ import os
 /// still retains them. Retain the sink and `await sink.flush()` when a tool
 /// needs to wait for output before exiting (not from a renderer).
 public struct TapeConsoleSink: TapeSink {
+    /// Palette copied into each accepted output job.
     public var theme: TapeTheme
+    /// Renderer run on the output worker, not the recording thread.
     public var renderer: any TapeTextRenderer
+    /// Presentation mode and width copied into each output job.
     public var capabilities: TapeConsoleCapabilities
+    /// Lowest severity forwarded to console output, independent of store history.
     public var minimumLevel: TapeLevel
     private let output: TapeConsoleOutput
 
+    /// Creates a bounded asynchronous stdout destination. Copies share its worker.
+    ///
+    /// - Parameters:
+    ///   - theme: Presentation palette.
+    ///   - renderer: Text renderer; defaults to the open-right box renderer.
+    ///   - capabilities: Presentation mode and width; detected by default.
+    ///   - minimumLevel: Lowest forwarded severity; defaults to `.trace`.
+    ///   - maximumPendingEntries: Positive queue capacity, excluding the active
+    ///     write. New output is dropped when full; defaults to 256.
     public init(
         theme: TapeTheme = .default,
         renderer: any TapeTextRenderer = TapeBoxRenderer(),
@@ -29,10 +42,13 @@ public struct TapeConsoleSink: TapeSink {
         self.output = TapeConsoleOutput(capacity: maximumPendingEntries)
     }
 
+    /// A new sink with default theme, renderer and detected output capabilities.
     public static var `default`: TapeConsoleSink {
         TapeConsoleSink()
     }
 
+    /// Enqueues an accepted entry without waiting for rendering or stdout.
+    /// Output generated recursively by a renderer is suppressed across consoles.
     public func record(_ entry: TapeEntry) {
         guard entry.level >= minimumLevel else { return }
         let context = TapeRenderContext(theme: theme, capabilities: capabilities)
@@ -45,6 +61,15 @@ public struct TapeConsoleSink: TapeSink {
 
     /// Waits until the worker is idle. A stalled stdout reader can keep this
     /// suspended, but never blocks recording or the calling thread.
+    /// Cancellation does not end this wait. Call before tool exit, not from a
+    /// renderer; process termination does not automatically drain queued jobs.
+    ///
+    /// ```swift
+    /// let console = TapeConsoleSink()
+    /// let logger = Tape(sinks: [console])
+    /// logger.info("Finished")
+    /// await console.flush()
+    /// ```
     public func flush() async {
         await output.flush()
     }

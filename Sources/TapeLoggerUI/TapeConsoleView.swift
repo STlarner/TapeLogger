@@ -12,11 +12,18 @@ public struct TapeConsoleView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
 
+    /// Creates a console that observes history while mounted. Present it from
+    /// your own sheet, or use the `tapeConsole` view modifier for a trigger.
+    ///
+    /// - Parameters:
+    ///   - store: The store of the logger being inspected.
+    ///   - theme: Light/dark palette for cards and controls.
     public init(store: TapeStore = Tape.shared.store, theme: TapeTheme = .default) {
         _model = State(initialValue: TapeConsoleModel(store: store))
         self.theme = theme
     }
 
+    /// Searchable timeline, level filters, clear and dismiss controls.
     public var body: some View {
         @Bindable var model = model
 

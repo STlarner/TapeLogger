@@ -7,7 +7,11 @@ import Foundation
 /// uninstall before releasing them so delegates and observers are restored.
 @MainActor
 public protocol TapeAdapter: AnyObject {
+    /// Starts observation. Implementations should tolerate repeated installation
+    /// of the same instance and throw if they cannot acquire a required resource.
     func install() throws
+    /// Stops new observation and restores hooks when still owned by this adapter.
+    /// Call explicitly before releasing an installed adapter.
     func uninstall()
 }
 
@@ -24,14 +28,21 @@ public protocol TapeAdapter: AnyObject {
 public final class TapeAdapters {
     private var installed: [any TapeAdapter] = []
 
+    /// Creates an empty main-actor owner without installing any event sources.
     public init() {}
 
+    /// Installs and retains an adapter only after successful installation.
+    /// Reinstalling an already-owned instance does nothing.
+    /// - Parameter adapter: Event source to retain until removal.
+    /// - Throws: The adapter's installation error; failed sources are not retained.
     public func install(_ adapter: any TapeAdapter) throws {
         guard !installed.contains(where: { $0 === adapter }) else { return }
         try adapter.install()
         installed.append(adapter)
     }
 
+    /// Uninstalls retained adapters in reverse order and releases ownership.
+    /// Safe to call repeatedly. This does not clear recorded history.
     public func removeAll() {
         let adapters = installed.reversed()
         installed.removeAll()

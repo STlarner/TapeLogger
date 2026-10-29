@@ -1,14 +1,13 @@
 public extension Tape {
-    /// `Tape.shared` behind unqualified calls, so a call site reads
-    /// `Tape.info("...")` instead of `Tape.shared.info("...")`.
-    ///
-    /// Every forwarder keeps the caller's source location: the defaults are
-    /// evaluated where the call is written, not inside this file.
-
+    /// Records a constructed entry on `Tape.shared`, retaining its source and
+    /// identity. Shared logger filters and recursion protection still apply.
     static func record(_ entry: TapeEntry) {
         shared.record(entry)
     }
 
+    /// Creates an entry on `Tape.shared`, using the caller's source location.
+    /// Severity defaults to the key's level, then `.info`; content is not
+    /// automatically redacted. See the instance `log` overload for parameters.
     static func log(
         _ message: String,
         level: TapeLevel? = nil,
@@ -33,6 +32,8 @@ public extension Tape {
         )
     }
 
+    /// Records a custom log value on `Tape.shared`, retaining its category,
+    /// severity, style, metadata and attachment with the caller's source.
     static func log(
         _ customLog: some TapeLog,
         file: String = #fileID,
@@ -42,6 +43,7 @@ public extension Tape {
         shared.log(customLog, file: file, function: function, line: line)
     }
 
+    /// Records trace-level detail on `Tape.shared` with caller source context.
     static func trace(
         _ message: String,
         key: TapeKey? = nil,
@@ -54,6 +56,7 @@ public extension Tape {
                      file: file, function: function, line: line)
     }
 
+    /// Records a debug event on `Tape.shared` with caller source context.
     static func debug(
         _ message: String,
         key: TapeKey? = nil,
@@ -66,6 +69,7 @@ public extension Tape {
                      file: file, function: function, line: line)
     }
 
+    /// Records an informational event on `Tape.shared`.
     static func info(
         _ message: String,
         key: TapeKey? = nil,
@@ -78,6 +82,7 @@ public extension Tape {
                     file: file, function: function, line: line)
     }
 
+    /// Records a noteworthy, non-error event on `Tape.shared`.
     static func notice(
         _ message: String,
         key: TapeKey? = nil,
@@ -90,6 +95,7 @@ public extension Tape {
                       file: file, function: function, line: line)
     }
 
+    /// Records a warning on `Tape.shared` without changing control flow.
     static func warning(
         _ message: String,
         key: TapeKey? = nil,
@@ -102,6 +108,7 @@ public extension Tape {
                        file: file, function: function, line: line)
     }
 
+    /// Records an error's description and attachment on `Tape.shared`.
     static func error(
         _ error: any Error,
         key: TapeKey? = nil,
@@ -114,6 +121,7 @@ public extension Tape {
                      file: file, function: function, line: line)
     }
 
+    /// Records an error-severity message on `Tape.shared` without an attachment.
     static func error(
         _ message: String,
         key: TapeKey? = nil,
@@ -126,6 +134,7 @@ public extension Tape {
                      file: file, function: function, line: line)
     }
 
+    /// Records a short summary and separate error attachment on `Tape.shared`.
     static func error(
         _ message: String,
         error: any Error,
@@ -139,6 +148,7 @@ public extension Tape {
                      file: file, function: function, line: line)
     }
 
+    /// Records a critical event on `Tape.shared` without terminating the app.
     static func critical(
         _ message: String,
         key: TapeKey? = nil,
@@ -151,6 +161,7 @@ public extension Tape {
                         file: file, function: function, line: line)
     }
 
+    /// Records a fault on `Tape.shared` without asserting or terminating.
     static func fault(
         _ message: String,
         key: TapeKey? = nil,
@@ -163,6 +174,8 @@ public extension Tape {
                      file: file, function: function, line: line)
     }
 
+    /// Measures synchronous work using `Tape.shared`. Records debug-level
+    /// elapsed time on return or throw; forwards the body's result or error.
     @discardableResult
     static func measure<T>(
         _ label: String,
@@ -177,6 +190,8 @@ public extension Tape {
                            file: file, function: function, line: line, body)
     }
 
+    /// Measures asynchronous work using `Tape.shared`, preserving caller actor
+    /// isolation. Records elapsed time including suspension on return or throw.
     @discardableResult
     static func measure<T>(
         _ label: String,

@@ -2,18 +2,27 @@ import Foundation
 
 /// Severity of a log entry.
 ///
-/// Cases map 1:1 to `os.Logger.Level`, so forwarding to the unified log
-/// is a plain switch with no lossy conversion.
+/// Ordered from trace through fault. Unified logging groups trace/debug,
+/// warning/error and critical/fault into shared underlying severities.
 public enum TapeLevel: Int, Sendable, CaseIterable, Comparable, Codable {
+    /// Most detailed tracing; maps to unified-log debug severity.
     case trace = 0
+    /// Developer diagnostics; maps to unified-log debug severity.
     case debug
+    /// Informational events; maps to unified-log info severity.
     case info
+    /// Noteworthy normal events; maps to unified-log default severity.
     case notice
+    /// Recoverable problems; maps to unified-log error severity.
     case warning
+    /// Failed operations; maps to unified-log error severity.
     case error
+    /// Severe failures; maps to unified-log fault severity.
     case critical
+    /// Highest severity; maps to unified-log fault severity without asserting.
     case fault
 
+    /// Compares the declared severity order from trace through fault.
     public static func < (lhs: TapeLevel, rhs: TapeLevel) -> Bool {
         lhs.rawValue < rhs.rawValue
     }

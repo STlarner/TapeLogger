@@ -6,12 +6,29 @@ import TapeLogger
 public struct TapeNetworkOptions: Sendable {
     /// Exact, case-insensitive hosts; an empty set allows all HTTP(S) hosts.
     public var allowedHosts: Set<String>
+    /// Enables bounded previews of supported text bodies; defaults to false.
+    /// Body content is not automatically redacted.
     public var logsBodies: Bool
+    /// Maximum captured bytes per body, initially 8192; init clamps negatives
+    /// to zero. The actual request/response data is still forwarded in full.
     public var bodyLimit: Int
     /// Matched case-insensitively, in addition to the built-in sensitive names.
     public var redactedHeaders: Set<String>
+    /// Additional case-insensitive query names to redact alongside built-ins.
     public var redactedQueryItems: Set<String>
 
+    /// Configures capture scope before installation. Options are copied into the
+    /// adapter and snapshotted for each intercepted request.
+    ///
+    /// - Parameters:
+    ///   - allowedHosts: Exact hosts; empty permits all HTTP(S) hosts in opted-in
+    ///     sessions. Subdomains are not implicitly included.
+    ///   - logsBodies: Opt-in previews for appropriate test data.
+    ///   - bodyLimit: Nonnegative preview byte limit; defaults to 8192.
+    ///   - redactedHeaders: Extra sensitive headers. Built-in authorization,
+    ///     proxy authorization, cookies, set-cookie and X-API-Key remain redacted.
+    ///   - redactedQueryItems: Extra sensitive query names. Built-in credential
+    ///     names remain redacted; URL user/password and fragments are removed.
     public init(
         allowedHosts: Set<String> = [],
         logsBodies: Bool = false,
@@ -30,6 +47,7 @@ public struct TapeNetworkOptions: Sendable {
 /// Adds logging to explicitly configured foreground URLSessions.
 ///
 /// ```swift
+/// let adapters = TapeAdapters()
 /// let network = TapeURLSessionAdapter()
 /// try adapters.install(network)
 /// let configuration = URLSessionConfiguration.default
@@ -47,16 +65,23 @@ public struct TapeNetworkOptions: Sendable {
 /// WebSockets, or live streamed uploads. With bodies enabled, finite request
 /// streams with a known size within the preview cap are buffered and replayed.
 /// Larger or unknown-size streams are forwarded without being read for logging.
-/// See the README for the full limitations.
+/// See the usage guide for capture scope and transport limitations.
 @MainActor
 public final class TapeURLSessionAdapter: TapeAdapter {
+    /// Failure to acquire process-wide network-capture ownership.
     public enum InstallationError: Error {
+        /// A different adapter instance is already installed in this process.
         case anotherNetworkAdapterIsInstalled
     }
 
     private let id = UUID()
     private let settings: NetworkSettings
 
+    /// Creates an inactive network observer without modifying any sessions.
+    ///
+    /// - Parameters:
+    ///   - tape: Logger receiving request, response and error entries.
+    ///   - options: Capture and redaction policy, copied at initialization.
     public init(
         tape: Tape = .shared, options: TapeNetworkOptions = .init()
     ) {
@@ -73,6 +98,10 @@ public final class TapeURLSessionAdapter: TapeAdapter {
         )
     }
 
+    /// Enables interception for explicitly configured sessions. Reinstalling this
+    /// instance is a no-op; only one instance may own capture process-wide.
+    /// - Throws: `InstallationError.anotherNetworkAdapterIsInstalled` when another
+    ///   instance is active. Removal permits another instance to install.
     public func install() throws {
         try TapeLoggingURLProtocol.registry.withLock { state in
             guard state == nil || state?.id == id else {
@@ -83,6 +112,10 @@ public final class TapeURLSessionAdapter: TapeAdapter {
     }
 
     /// Call before creating the URLSession. Other protocol classes are kept.
+    /// Repeated calls do not duplicate this adapter's protocol class. This does
+    /// not install the adapter, alter existing sessions, or opt in shared or
+    /// background sessions. Only HTTP(S) requests matching host scope are logged.
+    /// - Parameter configuration: Foreground configuration to opt into capture.
     public func configure(_ configuration: URLSessionConfiguration) {
         var classes = configuration.protocolClasses ?? []
         classes.removeAll { $0 == TapeLoggingURLProtocol.self }
@@ -90,6 +123,8 @@ public final class TapeURLSessionAdapter: TapeAdapter {
         configuration.protocolClasses = classes
     }
 
+    /// Stops new interception owned by this instance. In-flight requests finish
+    /// with their original settings; recorded history and configurations remain.
     public func uninstall() {
         TapeLoggingURLProtocol.registry.withLock { state in
             if state?.id == id { state = nil }

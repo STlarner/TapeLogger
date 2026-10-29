@@ -29,8 +29,8 @@ public protocol TapeLog: Sendable {
     var message: String { get }
     /// Header text, e.g. `route` or `payments`.
     var title: String { get }
-    /// Identity of the stream. Defaults to ``title``; it is what
-    /// `TapeTheme.keys` can override and what a UI filters on.
+    /// Category identity. Defaults to ``title`` and indexes `TapeTheme.keys`
+    /// overrides independently of this entry's severity or display title.
     var key: String { get }
     /// Severity of the entry. Defaults to `.info`.
     var level: TapeLevel { get }
@@ -45,11 +45,17 @@ public protocol TapeLog: Sendable {
 }
 
 extension TapeLog {
+    /// Defaults category identity to the custom log's display title.
     public var key: String { title }
+    /// Defaults custom logs to info severity.
     public var level: TapeLevel { .info }
+    /// Defaults to no category color, allowing the severity palette to resolve it.
     public var color: TapeColor? { nil }
+    /// Defaults to empty structured context.
     public var metadata: [String: TapeValue] { [:] }
+    /// Defaults to no measured duration.
     public var duration: Duration? { nil }
+    /// Defaults to no expanded attachment.
     public var attachment: TapeAttachment? { nil }
 
     /// Bridge to the internal model: a custom type is a key that carries its

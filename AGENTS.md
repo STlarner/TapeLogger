@@ -71,7 +71,7 @@ distributes `Sources/`, so `Demo/` never reaches a consumer.
 
 ```sh
 swift build
-swift test                       # 29 tests, runs on macOS
+swift test                       # runs on macOS
 xcodebuild -scheme TapeLoggerUI \
   -destination 'generic/platform=iOS Simulator' build
 ```
@@ -114,6 +114,17 @@ causes confusing "no member" errors. Fix with a clean build folder
 - Doc comments explain *why*, and show a small usage example when the type is
   part of the public API.
 - README code samples must be copy-pasteable and match the shipped API.
+
+## Documentation
+
+- Public API comments are required, including extension members and defaults.
+- Workflow guides live in the module's `.docc` catalog, not a duplicate manual.
+- `python3 Scripts/build_documentation.py` builds all iOS APIs and checks comment
+  coverage with DocC warnings treated as errors.
+- `python3 Scripts/check_examples.py` compiles Swift examples from source
+  comments, DocC articles and the README after the documentation build.
+- GitHub Actions validates pull requests and publishes `/TapeLogger/api/` only
+  from `main`. The website is labeled as main-branch documentation, not a release.
 
 ## Behaviour that is easy to break
 

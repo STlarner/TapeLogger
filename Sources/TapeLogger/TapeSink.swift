@@ -7,5 +7,8 @@ import Foundation
 /// ordering is preserved, and it is *always* called outside of any internal
 /// lock, so a sink is free to call back into `Tape`.
 public protocol TapeSink: Sendable {
+    /// Accepts an entry synchronously on the recording thread. Buffer expensive
+    /// rendering or I/O internally, and synchronize state for concurrent callers.
+    /// Recursive calls into the same logger are suppressed.
     func record(_ entry: TapeEntry)
 }

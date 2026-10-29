@@ -1,6 +1,7 @@
 import SwiftUI
 import TapeLogger
 
+/// Resolves core semantic colors into SwiftUI colors without UI imports in core.
 extension TapeColor {
     /// Resolves the palette entry for the current appearance.
     ///

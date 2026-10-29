@@ -11,6 +11,8 @@ import UIKit
 /// uninstall never overwrites that replacement.
 ///
 /// ```swift
+/// let adapters = TapeAdapters()
+/// let navigationController = UINavigationController()
 /// try adapters.install(
 ///     TapeNavigationAdapter(navigationController: navigationController)
 /// )
@@ -31,6 +33,14 @@ public final class TapeNavigationAdapter: NSObject,
     private let describe: (UIViewController) -> String
     private var isInstalled = false
 
+    /// Creates an inactive observer without taking ownership of the controller.
+    ///
+    /// - Parameters:
+    ///   - navigationController: Controller to observe weakly.
+    ///   - name: Stable stack label recorded in metadata.
+    ///   - tape: Logger receiving navigation entries; defaults to shared.
+    ///   - describe: Destination label; defaults to its controller type name.
+    ///     Avoid including secrets or personal screen content.
     public init(
         navigationController: UINavigationController,
         name: String = "navigation",
@@ -46,6 +56,9 @@ public final class TapeNavigationAdapter: NSObject,
         super.init()
     }
 
+    /// Snapshots the current stack and replaces the delegate with a forwarding
+    /// observer. No initial event is emitted. Retain the previous delegate in
+    /// your app as usual; forwarding keeps only a weak reference to it.
     public func install() {
         guard !isInstalled, let navigationController else { return }
         previousDelegate = navigationController.delegate
@@ -54,6 +67,8 @@ public final class TapeNavigationAdapter: NSObject,
         navigationController.delegate = self
     }
 
+    /// Restores the prior delegate only if this adapter is still the delegate.
+    /// Safe after the app replaces the delegate or releases the controller.
     public func uninstall() {
         guard isInstalled else { return }
         if let navigationController,
@@ -65,6 +80,9 @@ public final class TapeNavigationAdapter: NSObject,
         isInstalled = false
     }
 
+    /// UIKit callback that compares completed stacks, logs push/pop/replace at
+    /// debug severity, and forwards to the previous delegate. Cancelled gestures
+    /// with an unchanged stack do not create an entry. Not for direct invocation.
     public func navigationController(
         _ navigationController: UINavigationController,
         didShow viewController: UIViewController,
@@ -100,11 +118,15 @@ public final class TapeNavigationAdapter: NSObject,
         )
     }
 
+    /// Reports callbacks implemented by this adapter or its previous delegate.
+    /// UIKit may query capabilities outside actor-isolated transition callbacks.
     public nonisolated override func responds(to selector: Selector) -> Bool {
         super.responds(to: selector)
             || forwarding.delegate?.responds(to: selector) == true
     }
 
+    /// Forwards supported Objective-C delegate callbacks to the previous delegate,
+    /// including custom animation and interaction-controller callbacks.
     public nonisolated override func forwardingTarget(
         for selector: Selector
     ) -> Any? {

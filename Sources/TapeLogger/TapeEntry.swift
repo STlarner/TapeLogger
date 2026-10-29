@@ -6,19 +6,48 @@ import Foundation
 /// Console text, UI cards and JSON export are all derived from this type,
 /// which is why new destinations can be added without touching call sites.
 public struct TapeEntry: Identifiable, Sendable {
+    /// Identity used by UI lists; independent of date and sequence.
     public let id: UUID
-    /// Monotonic tie-breaker: `Date` alone can collide inside the same
-    /// millisecond and make the timeline reorder itself.
+    /// Ordering hint allocated by logger `log` calls or supplied by a producer.
+    /// Allocation is monotonic per logger; concurrent calls may reach the store
+    /// in a different order. Direct construction defaults to zero.
     public let sequence: UInt64
+    /// Wall-clock creation time; elapsed measurements use `duration` instead.
     public let date: Date
+    /// Severity used by logger, sink and UI filters.
     public let level: TapeLevel
+    /// Category identity, display title and optional presentation style.
     public let key: TapeKey
+    /// Human-readable summary, stored without automatic redaction.
     public let message: String
+    /// Structured diagnostic context, stored without automatic redaction.
     public let metadata: [String: TapeValue]
+    /// Caller location, if supplied by a logger or custom producer.
     public let source: TapeSource?
+    /// Optional elapsed time associated with the event.
     public let duration: Duration?
+    /// Typed detail shown by the UI and built-in text destinations.
     public let attachment: TapeAttachment?
 
+    /// Creates content without recording it. Pass it to a logger's `record`.
+    ///
+    /// ```swift
+    /// let entry = TapeEntry(level: .info, message: "Cache ready")
+    /// let logger = Tape(sinks: [])
+    /// logger.record(entry)
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - id: Stable entry identity; defaults to a new UUID.
+    ///   - sequence: Producer ordering hint; defaults to zero.
+    ///   - date: Wall-clock creation time; defaults to now.
+    ///   - level: Event severity.
+    ///   - key: Category; defaults to `.log`.
+    ///   - message: Human-readable summary.
+    ///   - metadata: Structured context; defaults to empty.
+    ///   - source: Optional caller location.
+    ///   - duration: Optional elapsed time.
+    ///   - attachment: Optional detailed payload.
     public init(
         id: UUID = UUID(),
         sequence: UInt64 = 0,
@@ -46,11 +75,21 @@ public struct TapeEntry: Identifiable, Sendable {
 
 // MARK: - Source
 
+/// A captured caller location. Logger defaults capture it at the call site.
 public struct TapeSource: Sendable, Hashable {
+    /// File identifier, usually `#fileID`, rather than an absolute path.
     public let file: String
+    /// Function name, usually `#function`.
     public let function: String
+    /// One-based source line, usually `#line`.
     public let line: Int
 
+    /// Captures the current call site or accepts an explicit producer location.
+    ///
+    /// - Parameters:
+    ///   - file: File identifier.
+    ///   - function: Function name.
+    ///   - line: One-based line number.
     public init(file: String = #fileID, function: String = #function, line: Int = #line) {
         self.file = file
         self.function = function
@@ -69,18 +108,36 @@ public struct TapeSource: Sendable, Hashable {
 /// Typed payload for the detail screen, so the UI can render structured
 /// content instead of a blob of text.
 public enum TapeAttachment: Sendable {
+    /// A structured HTTP exchange, already sanitized by its producer.
     case http(TapeHTTPExchange)
+    /// An error description; the original error object is not retained.
     case error(String)
+    /// An explicitly supplied stack trace; no stack is captured automatically.
     case stackTrace(String)
+    /// App-defined payload with a semantic identifier and plain-text content.
     case custom(id: String, payload: String)
 }
 
+/// Request and optional response details captured by a network producer.
+///
+/// This value does not perform I/O or redact content. Network adapters sanitize
+/// their output before constructing it; custom producers must do the same.
 public struct TapeHTTPExchange: Sendable {
+    /// Headers and an optional bounded body preview for one side of an exchange.
     public struct Side: Sendable {
+        /// Captured header values; sensitive fields should already be redacted.
         public var headers: [String: String]
+        /// Optional text preview, not necessarily the complete body.
         public var body: String?
+        /// Known body byte count, which may exceed the preview size.
         public var bodySize: Int?
 
+        /// Creates one side without capturing or transforming traffic.
+        ///
+        /// - Parameters:
+        ///   - headers: Already-sanitized header values.
+        ///   - body: Optional text preview or capture explanation.
+        ///   - bodySize: Optional known byte count; zero denotes an empty body.
         public init(
             headers: [String: String] = [:],
             body: String? = nil,
@@ -92,12 +149,25 @@ public struct TapeHTTPExchange: Sendable {
         }
     }
 
+    /// HTTP method, such as `GET` or `POST`.
     public var method: String
+    /// URL text, with credentials and sensitive query values removed by adapters.
     public var url: String
+    /// Response status when available; transport failures may have none.
     public var statusCode: Int?
+    /// Request headers and optional body preview.
     public var request: Side
+    /// Response details, absent before a response or after some transport errors.
     public var response: Side?
 
+    /// Creates an exchange from captured or explicitly supplied content.
+    ///
+    /// - Parameters:
+    ///   - method: HTTP method.
+    ///   - url: Already-sanitized URL string.
+    ///   - statusCode: Optional response status.
+    ///   - request: Request details, empty by default.
+    ///   - response: Optional response details.
     public init(
         method: String,
         url: String,
@@ -157,7 +227,9 @@ extension TapeAttachment {
 // MARK: - Copy / export
 
 extension TapeEntry {
-    /// Plain text representation used by the copy button and by file export.
+    /// Plain text used by copying and unified logging. Includes time, severity,
+    /// category, message, metadata, duration and attachments, but not source.
+    /// This does not write a file or redact content.
     public var copyText: String {
         var text = "[\(heading)] | \(TapeTimeFormatter.string(from: date))"
         if let duration {

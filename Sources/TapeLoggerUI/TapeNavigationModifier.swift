@@ -1,6 +1,7 @@
 import SwiftUI
 import TapeLogger
 
+/// Adds opt-in navigation-path and scene-lifecycle observation to SwiftUI views.
 extension View {
     /// Observes route state, without requiring a particular router.
     /// Attach once per stack. Route descriptions should not contain secrets.
@@ -8,9 +9,21 @@ extension View {
     /// coalesce several mutations into one view update.
     ///
     /// ```swift
-    /// NavigationStack(path: $routes) { HomeView() }
-    ///     .tapeNavigation(path: $routes, name: "main")
+    /// struct RouteExample: View {
+    ///     @State private var routes: [Int] = []
+    ///     var body: some View {
+    ///         NavigationStack(path: $routes) { Text("Home") }
+    ///             .tapeNavigation(path: $routes, name: "main")
+    ///     }
+    /// }
     /// ```
+    ///
+    /// - Parameters:
+    ///   - path: Typed route array bound to the navigation stack.
+    ///   - name: Stable stack label recorded in metadata.
+    ///   - tape: Logger receiving debug-level navigation entries.
+    ///   - describe: Destination name; avoid sensitive route contents.
+    /// - Returns: A view observing typed path changes.
     public func tapeNavigation<Route: Hashable>(
         path: Binding<[Route]>,
         name: String = "navigation",
@@ -30,6 +43,14 @@ extension View {
 
     /// `NavigationPath` hides its elements: only depth and opaque replacement
     /// events can be recorded. Typed arrays provide destination names.
+    /// A different-depth replacement looks like a push or pop. No initial event
+    /// is emitted; callbacks describe state changes, not animation completion.
+    ///
+    /// - Parameters:
+    ///   - path: Opaque path bound to the navigation stack.
+    ///   - name: Stable stack label recorded in metadata.
+    ///   - tape: Logger receiving debug-level navigation entries.
+    /// - Returns: A view observing path depth and opaque replacement changes.
     public func tapeNavigation(
         path: Binding<NavigationPath>,
         name: String = "navigation",
@@ -47,6 +68,13 @@ extension View {
 
     /// Records a scene separately from application-wide notifications.
     /// Supply a stable name to distinguish windows in multi-scene apps.
+    /// Records initial phase and subsequent changes at debug severity, with
+    /// `scope: scene`. This does not install app-notification observers.
+    ///
+    /// - Parameters:
+    ///   - name: Stable scene label, especially for multiple windows.
+    ///   - tape: Logger receiving the scene events.
+    /// - Returns: A view recording its scene activity.
     public func tapeSceneLifecycle(
         name: String = "main", tape: Tape = .shared
     ) -> some View {
