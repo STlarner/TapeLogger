@@ -64,17 +64,16 @@ The boxes in this document are cropped for readability.
 ## Installation
 
 ```swift
-.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.9.2")
+.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.10.0")
 ```
 
 Products: `TapeLogger` (core, no dependencies), `TapeLoggerUI` (SwiftUI), and
-`TapeLoggerAdapters` (opt-in event sources, upcoming v0.10.0).
+`TapeLoggerAdapters` (opt-in event sources).
 
-The latest published release is v0.9.2. The adapter, navigation, asynchronous
-console, OSLog privacy and actor-aware measurement APIs below are implemented
-in this checkout for **v0.10.0, not yet released**. Until that tag exists, try
-them through a local package reference, as the demo does. After release, update
-the installation requirement above to `from: "0.10.0"`.
+The latest published release is **v0.10.0**, including adapters, navigation,
+asynchronous console delivery, configurable OSLog privacy and actor-aware
+measurement. See [output delivery and privacy](#output-delivery-and-privacy-v0100)
+for the console delivery and unified-log privacy changes when upgrading.
 
 ## Setup
 
@@ -302,7 +301,7 @@ Search includes attachment details, HTTP headers/bodies and source filenames.
 Level filters announce whether they are included or excluded to accessibility.
 Clear resets every subscribed console and rejects buffered pre-clear entries.
 
-## Automatic event sources (upcoming v0.10.0)
+## Automatic event sources
 
 One explicit connection per source, then automatic entries. No swizzling,
 global navigation hooks, or third-party dependencies. Adapters accept a custom
@@ -557,10 +556,10 @@ supported target is iOS 17+.
 
 Short version, in the order it will be tackled:
 
-- [x] Adapters, lifecycle, opt-in URLSession logging (unreleased v0.10.0)
-- [x] UIKit and SwiftUI navigation utilities (unreleased v0.10.0)
+- [x] Adapters, lifecycle, opt-in URLSession logging (v0.10.0)
+- [x] UIKit and SwiftUI navigation utilities (v0.10.0)
 - [x] Review hardening: bounded console output, private OSLog, reset-safe
-      consoles, actor-aware measurement and safe text rendering (unreleased v0.10.0)
+      consoles, actor-aware measurement and safe text rendering (v0.10.0)
 - [ ] Console: filter by key, pause, entry detail, export
 - [ ] File persistence (`TapeFileSink`) and loading a saved session
 - [ ] Signposts, CI, DocC

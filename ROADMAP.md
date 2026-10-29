@@ -3,14 +3,16 @@
 Where TapeLogger stands and what comes next, in the order it was discussed.
 A new session should be able to pick the first unchecked item and start.
 
-Current release: **v0.9.2**.
+Current release: **v0.10.0**.
 
-Next release: **v0.10.0 (implemented, not tagged)** — lifecycle, opt-in
+Latest release: lifecycle, opt-in
 URLSession logging, UIKit/SwiftUI navigation, the five-tab demo, and review
 hardening. This minor version includes new console delivery/flush controls,
 private-by-default configurable OSLog output and actor-aware async measurement.
 
-## Review hardening (unreleased v0.10.0)
+Next focus: console filtering by key, pause, entry detail and export.
+
+## Review hardening (v0.10.0)
 
 - [x] Release removed sinks outside the logger lock and reclaim recursion TLS.
 - [x] Bound asynchronous console output, expose drops and asynchronous flush.
@@ -40,6 +42,7 @@ private-by-default configurable OSLog output and actor-aware async measurement.
 | 0.9.0 | `TapeLog`: app-defined log types carrying header, level and color |
 | 0.9.1 | 🧭 badge for the navigation key |
 | 0.9.2 | Distinct badges for the built-in keys (📤 📥 💥 💾) |
+| 0.10.0 | Lifecycle/network/navigation adapters, movable console button, bounded asynchronous output, configurable private OSLog, reset-safe consoles and rendering hardening |
 | — | Demo app in `Demo/` (not distributed) |
 
 ## 1. Adapters module
