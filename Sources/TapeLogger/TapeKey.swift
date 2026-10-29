@@ -61,18 +61,18 @@ public struct TapeKey: Hashable, Sendable, ExpressibleByStringLiteral {
     public static let httpRequest = TapeKey(
         "http.request",
         title: "http-request",
-        color: TapeColor(light: 0xC218B5, dark: 0xF602C1, ansi: 200, emoji: "🟣")
+        color: TapeColor(light: 0xC218B5, dark: 0xF602C1, ansi: 200, emoji: "📤")
     )
     public static let httpResponse = TapeKey(
         "http.response",
         title: "http-response",
-        color: TapeColor(light: 0x1B8A3A, dark: 0x30D158, ansi: 40, emoji: "🟢")
+        color: TapeColor(light: 0x1B8A3A, dark: 0x30D158, ansi: 40, emoji: "📥")
     )
     public static let httpError = TapeKey(
         "http.error",
         title: "http-error",
         level: .error,
-        color: TapeColor(light: 0xD32F2F, dark: 0xFF453A, ansi: 203, emoji: "🔴")
+        color: TapeColor(light: 0xD32F2F, dark: 0xFF453A, ansi: 203, emoji: "💥")
     )
     public static let navigation = TapeKey(
         "navigation",
@@ -83,7 +83,7 @@ public struct TapeKey: Hashable, Sendable, ExpressibleByStringLiteral {
     public static let storage = TapeKey(
         "storage",
         level: .debug,
-        color: TapeColor(light: 0x00695C, dark: 0x64D2FF, ansi: 80, emoji: "🟦")
+        color: TapeColor(light: 0x00695C, dark: 0x64D2FF, ansi: 80, emoji: "💾")
     )
     public static let lifecycle = TapeKey("lifecycle", level: .debug)
 }

@@ -3,7 +3,7 @@
 Where TapeLogger stands and what comes next, in the order it was discussed.
 A new session should be able to pick the first unchecked item and start.
 
-Current release: **v0.9.1**.
+Current release: **v0.9.2**.
 
 ## Shipped
 
@@ -21,6 +21,7 @@ Current release: **v0.9.1**.
 | 0.8.1 | Default width narrowed to 77 columns, capped to the terminal width |
 | 0.9.0 | `TapeLog`: app-defined log types carrying header, level and color |
 | 0.9.1 | 🧭 badge for the navigation key |
+| 0.9.2 | Distinct badges for the built-in keys (📤 📥 💥 💾) |
 | — | Demo app in `Demo/` (not distributed) |
 
 ## 1. Adapters module

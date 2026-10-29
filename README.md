@@ -11,7 +11,7 @@ Tape.error(error)
 
 ```
 ┌──────────────────────────────────────────────────
-│ 🟣 info · http-request | 21:30:34.584 | 584ms
+│ 📤 info · http-request | 21:30:34.584 | 584ms
 │ GET https://jsonplaceholder.typicode.com/users/1
 └──────────────────────────────────────────────────
 ```
@@ -59,7 +59,7 @@ The boxes in this document are cropped for readability.
 ## Installation
 
 ```swift
-.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.9.1")
+.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.9.2")
 ```
 
 Products: `TapeLogger` (core, no dependencies) and `TapeLoggerUI` (SwiftUI).
