@@ -9,12 +9,18 @@ let package = Package(
     ],
     products: [
         .library(name: "TapeLogger", targets: ["TapeLogger"]),
+        .library(name: "TapeLoggerAdapters", targets: ["TapeLoggerAdapters"]),
         .library(name: "TapeLoggerUI", targets: ["TapeLoggerUI"]),
     ],
     targets: [
         .target(name: "TapeLogger"),
+        .target(name: "TapeLoggerAdapters", dependencies: ["TapeLogger"]),
         .target(name: "TapeLoggerUI", dependencies: ["TapeLogger"]),
         .testTarget(name: "TapeLoggerTests", dependencies: ["TapeLogger"]),
+        .testTarget(
+            name: "TapeLoggerAdaptersTests",
+            dependencies: ["TapeLoggerAdapters", "TapeLoggerUI"]
+        ),
     ],
     swiftLanguageModes: [.v6]
 )

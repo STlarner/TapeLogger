@@ -63,13 +63,11 @@ public struct TapeConsoleView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
             }
-            // Without this the console opens on the oldest entries, because
-            // the newest ones are appended at the bottom.
+            // Unlike an onAppear scroll, this applies after the initial
+            // layout, when lazy rows have their real positions.
+            .defaultScrollAnchor(.bottom)
             .onChange(of: model.visibleEntries.last?.id) { _, id in
                 scrollToBottom(proxy, id: id)
-            }
-            .onAppear {
-                scrollToBottom(proxy, id: model.visibleEntries.last?.id)
             }
             .overlay {
                 if model.visibleEntries.isEmpty {

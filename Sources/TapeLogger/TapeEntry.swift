@@ -111,6 +111,18 @@ public struct TapeHTTPExchange: Sendable {
         self.request = request
         self.response = response
     }
+
+    /// Shared by text destinations so neither side of an exchange is lost.
+    package var bodyText: String {
+        var sections: [String] = []
+        if let body = request.body {
+            sections.append("Request body:\n\(body)")
+        }
+        if let body = response?.body {
+            sections.append("Response body:\n\(body)")
+        }
+        return sections.joined(separator: "\n\n")
+    }
 }
 
 // MARK: - Copy / export
@@ -137,8 +149,8 @@ extension TapeEntry {
             if let statusCode = exchange.statusCode {
                 text += " → \(statusCode)"
             }
-            if let body = exchange.response?.body {
-                text += "\n\(body)"
+            if !exchange.bodyText.isEmpty {
+                text += "\n\n\(exchange.bodyText)"
             }
         case .custom(_, let payload):
             text += "\n\n\(payload)"

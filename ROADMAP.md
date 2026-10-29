@@ -5,6 +5,9 @@ A new session should be able to pick the first unchecked item and start.
 
 Current release: **v0.9.2**.
 
+Next release: **v0.10.0 (implemented, not tagged)** — lifecycle, opt-in
+URLSession logging, UIKit/SwiftUI navigation, and the five-tab demo.
+
 ## Shipped
 
 | Version | What landed |
@@ -28,36 +31,56 @@ Current release: **v0.9.2**.
 
 The network, events and UI sources discussed at the beginning.
 
-- [ ] New product `TapeLoggerAdapters`, depending on `TapeLogger` only.
-- [ ] `public protocol TapeAdapter` with `install()`, `uninstall()` and a
+- [x] New product `TapeLoggerAdapters`, depending on `TapeLogger` only.
+- [x] `public protocol TapeAdapter` with `install()`, `uninstall()` and a
       documented retention story: who holds the adapter, when it is removed.
       Flutter frameworks offer global observers; Apple's do not, so an adapter
       is a *source* that calls `Tape.record`, not a replacement for the API.
-- [ ] Register installed adapters so `Tape` can uninstall them all
-      (`Tape.removeAllAdapters()`), for tests and for "disable logging" mode.
-- [ ] Lifecycle adapter: app foreground/background, memory warnings, thermal
-      state. Cheap and useful as the first adapter.
+- [x] `TapeAdapters` retains installed sources and uninstalls them with
+      `removeAll()`, without adding source ownership to the core hot path.
+- [x] Lifecycle adapter: app foreground/background and active/inactive.
+      SwiftUI scene lifecycle is separate. No thermal, battery or memory
+      monitoring: keep the initial scope focused on useful app events.
 
 ## 2. Network logging
 
-Decided order of attack, from least invasive to most:
+Scope agreed for v0.10.0: URLSession only, configured once per session rather
+than a wrapper at every call site. No separate Alamofire product or monitor.
 
-- [ ] **v1 — explicit wrapper.** `Tape.session(configuration:)` returning a
-      `URLSession` with a delegate-free logging transport, or
-      `URLSession.data(for:)` helpers, that log request, response, status,
-      duration and a truncated body as `http.request` / `http.response`.
-      Explicit, opt-in per call site, no surprises.
-- [ ] **v2 — `URLProtocol`.** `Tape.registerURLProtocol(in:)` for apps that
-      cannot touch their call sites. Must be opt-in, must document that it
-      does not see WebSocket traffic, and must not intercept more than the
-      configured hosts.
+- [x] `TapeURLSessionAdapter` installs an opt-in `URLProtocol` on a session
+      configuration. Request/response/error, status, duration, correlation ID,
+      HTTP attachment and bounded, opt-in body previews.
+- [x] Exact host allowlist, header/query redaction, binary-body omission and
+      JSON pretty print. Default body cap is 8 KB.
+- [x] Forward cancellation and redirects; document unsupported background,
+      WebSocket, custom transport/authentication and stream-replay scenarios.
+- [x] Document one active network adapter per process, in-flight settings
+      snapshots and bounded buffering/replay of finite, small request streams.
+      Large/unknown-size streams are not consumed for logging.
+- [x] Shared request/response color, labeled bodies in cards, text boxes and
+      copied output, and request-body capture for ordinary small POSTs.
 - [x] **Never** swizzle `URLSession` or anything else at runtime.
 
-Body handling rules to settle while implementing v1: size cap (start at 8 KB),
-redaction of `Authorization`/`Cookie`, opt-in body logging, JSON pretty print.
+## 2a. Navigation
+
+- [x] UIKit navigation-controller adapter: completed push/pop/replace events,
+      delegate forwarding and safe restoration. No false pop for cancelled
+      interactive transitions.
+- [x] SwiftUI typed-route modifier: push/pop/reset/replace without a router
+      dependency. Opaque `NavigationPath` support reports depth, not route names.
+- [x] Demo tabs for both frameworks, plus network and real lifecycle cases.
+- [ ] Manual iOS runtime validation of delegates, interactive gestures, scene
+      transitions and the demo layout. Console startup at the newest entry was
+      visually verified with 150 history entries on the running simulator.
 
 ## 3. In-app console
 
+- [x] Draggable floating button, half-hidden snapping at either horizontal edge,
+      drag-to-reveal, resize-aware placement and accessible dock/reveal actions.
+- [x] Start docked above bottom bars, show an inward arrow in the visible half,
+      and reveal on the first tap before opening the console on a second tap.
+- [x] Open at the newest entry using a bottom default scroll anchor; refresh
+      the snapshot atomically with subscription when the console opens again.
 - [ ] Filter by key, not only by level chip and free text.
 - [ ] Pause/resume while reading, with a "new entries" counter instead of
       snapping back to the bottom (auto-scroll exists, the pause is missing).

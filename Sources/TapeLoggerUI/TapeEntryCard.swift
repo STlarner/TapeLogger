@@ -110,7 +110,39 @@ public struct TapeEntryCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(theme.background.color(for: colorScheme), in: .rect(cornerRadius: 8))
             }
+
+            if case .http(let exchange) = entry.attachment {
+                bodySection("Request body", side: exchange.request)
+                if let response = exchange.response {
+                    bodySection("Response body", side: response)
+                }
+            }
         }
+    }
+
+    private func bodySection(
+        _ title: String, side: TapeHTTPExchange.Side
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title).fontWeight(.semibold)
+                Spacer(minLength: 0)
+                if let size = side.bodySize {
+                    Text("\(size) bytes")
+                }
+            }
+            Text(side.body ?? (side.bodySize == 0
+                ? "Empty body" : "Body not captured"))
+                .textSelection(.enabled)
+        }
+        .font(.system(.caption2, design: .monospaced))
+        .foregroundStyle(theme.text.color(for: colorScheme))
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            theme.background.color(for: colorScheme),
+            in: .rect(cornerRadius: 8)
+        )
     }
 
     private var attachmentText: String? {
@@ -122,14 +154,8 @@ public struct TapeEntryCard: View {
         case .custom(_, let payload):
             return payload
         case .http(let exchange):
-            var text = "\(exchange.method) \(exchange.url)"
-            if let statusCode = exchange.statusCode {
-                text += " → \(statusCode)"
-            }
-            if let body = exchange.response?.body {
-                text += "\n\n\(body)"
-            }
-            return text
+            let status = exchange.statusCode.map { " → \($0)" } ?? ""
+            return "\(exchange.method) \(exchange.url)\(status)"
         case .none:
             return nil
         }

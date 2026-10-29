@@ -53,6 +53,13 @@ public struct TapeBoxRenderer: TapeTextRenderer {
             ).map(String.init)
         )
 
+        if case .http(let exchange) = entry.attachment,
+           !exchange.bodyText.isEmpty {
+            logicalLines.append(contentsOf: exchange.bodyText.components(
+                separatedBy: "\n"
+            ))
+        }
+
         let metadataLine = metadataSummary(entry)
         if !metadataLine.isEmpty {
             logicalLines.append(metadataLine)

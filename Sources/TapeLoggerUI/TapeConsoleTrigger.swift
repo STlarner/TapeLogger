@@ -2,7 +2,9 @@ import SwiftUI
 
 /// How the in-app console is opened.
 public enum TapeConsoleTrigger: Sendable, Equatable {
-    /// Floating ladybug button in the bottom trailing corner.
+    /// Draggable debug button, initially half-hidden at the right edge above
+    /// bottom bars. A docked arrow reveals the button on tap; tap again to open.
+    /// Near either side it snaps halfway off-screen; dragging also reveals it.
     case button
     /// Physical device shake. Useful on device, invisible in the UI.
     case shake

@@ -73,4 +73,23 @@ public final class TapeStore: Sendable {
             }
         }
     }
+
+    /// Registers before releasing the snapshot lock: the console cannot miss
+    /// entries between initializing its history and subscribing to updates.
+    package func snapshotAndStream() -> (
+        snapshot: [TapeEntry], stream: AsyncStream<TapeEntry>
+    ) {
+        let (stream, continuation) = AsyncStream<TapeEntry>.makeStream(
+            bufferingPolicy: .bufferingNewest(streamBufferSize)
+        )
+        let id = UUID()
+        continuation.onTermination = { [state] _ in
+            state.withLock { $0.continuations[id] = nil }
+        }
+        let snapshot = state.withLock { state in
+            state.continuations[id] = continuation
+            return state.entries
+        }
+        return (snapshot, stream)
+    }
 }

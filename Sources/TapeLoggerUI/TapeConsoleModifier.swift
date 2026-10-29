@@ -25,9 +25,11 @@ public struct TapeConsoleModifier: ViewModifier {
 
     public func body(content: Content) -> some View {
         content
-            .overlay(alignment: .bottomTrailing) {
+            .overlay {
                 if trigger == .button {
-                    triggerButton
+                    TapeFloatingConsoleButton(theme: theme) {
+                        isPresented = true
+                    }
                 }
             }
             .background {
@@ -38,24 +40,6 @@ public struct TapeConsoleModifier: ViewModifier {
             .sheet(isPresented: $isPresented) {
                 TapeConsoleView(store: store, theme: theme)
             }
-    }
-
-    private var triggerButton: some View {
-        Button {
-            isPresented = true
-        } label: {
-            Image(systemName: "ladybug.fill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-                .padding(10)
-                .background(.black.opacity(0.75), in: .circle)
-                .overlay {
-                    Circle().strokeBorder(.white.opacity(0.15), lineWidth: 1)
-                }
-        }
-        .buttonStyle(.plain)
-        .padding(16)
-        .accessibilityLabel("Open log console")
     }
 
     @ViewBuilder

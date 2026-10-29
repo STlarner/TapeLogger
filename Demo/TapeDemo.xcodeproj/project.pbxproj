@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		AA0000000000000000000013 /* TapeLogger in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000011 /* TapeLogger */; };
 		AA0000000000000000000014 /* TapeLoggerUI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000012 /* TapeLoggerUI */; };
+		AA0000000000000000000016 /* TapeLoggerAdapters in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000015 /* TapeLoggerAdapters */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 			files = (
 				AA0000000000000000000013 /* TapeLogger in Frameworks */,
 				AA0000000000000000000014 /* TapeLoggerUI in Frameworks */,
+				AA0000000000000000000016 /* TapeLoggerAdapters in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,6 +76,7 @@
 			packageProductDependencies = (
 				AA0000000000000000000011 /* TapeLogger */,
 				AA0000000000000000000012 /* TapeLoggerUI */,
+				AA0000000000000000000015 /* TapeLoggerAdapters */,
 			);
 			productName = TapeDemo;
 			productReference = AA0000000000000000000003 /* TapeDemo.app */;
@@ -209,7 +212,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.TapeDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -235,7 +238,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.TapeDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -271,6 +274,11 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		AA0000000000000000000015 /* TapeLoggerAdapters */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000010 /* XCLocalSwiftPackageReference ".." */;
+			productName = TapeLoggerAdapters;
+		};
 		AA0000000000000000000011 /* TapeLogger */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = AA0000000000000000000010 /* XCLocalSwiftPackageReference ".." */;

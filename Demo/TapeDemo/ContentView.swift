@@ -2,8 +2,8 @@ import SwiftUI
 import TapeLogger
 import TapeLoggerUI
 
-struct ContentView: View {
-    @State private var trigger: TapeConsoleTrigger = .button
+struct LoggingDemoView: View {
+    @Binding var trigger: TapeConsoleTrigger
 
     var body: some View {
         NavigationStack {
@@ -76,11 +76,17 @@ struct ContentView: View {
                             .tag(TapeConsoleTrigger.none)
                     }
                     .pickerStyle(.segmented)
+                    if trigger == .button {
+                        Text("Tap the edge arrow to reveal the debug button, "
+                             + "then tap again to open logs. Drag to move; "
+                             + "drop near either side to tuck it away.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .navigationTitle("Tape")
         }
-        .tapeConsole(trigger: trigger)
     }
 
     private func row(
@@ -118,5 +124,5 @@ private struct RowButtonStyle: ButtonStyle {
 }
 
 #Preview {
-    ContentView()
+    LoggingDemoView(trigger: .constant(.button))
 }

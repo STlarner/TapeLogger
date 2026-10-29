@@ -19,6 +19,7 @@ public final class TapeConsoleModel {
 
     private var pending: [TapeEntry] = []
     private var flushTask: Task<Void, Never>?
+    private var consumptionID: UUID?
 
     public init(store: TapeStore = Tape.shared.store, maxEntries: Int = 1000) {
         self.store = store
@@ -29,7 +30,23 @@ public final class TapeConsoleModel {
     /// Consumes the store stream until the surrounding task is cancelled.
     /// Call it from `.task { }` so it stops when the screen disappears.
     public func consume() async {
-        for await entry in store.stream {
+        let id = UUID()
+        consumptionID = id
+        flushTask?.cancel()
+        flushTask = nil
+        pending.removeAll(keepingCapacity: true)
+        let observation = store.snapshotAndStream()
+        entries = Array(observation.snapshot.suffix(maxEntries))
+        defer {
+            if consumptionID == id {
+                flushTask?.cancel()
+                flushTask = nil
+                flush()
+                consumptionID = nil
+            }
+        }
+        for await entry in observation.stream {
+            guard consumptionID == id else { break }
             ingest(entry)
         }
     }
@@ -63,7 +80,11 @@ public final class TapeConsoleModel {
 
         guard flushTask == nil else { return }
         flushTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(50))
+            do {
+                try await Task.sleep(for: .milliseconds(50))
+            } catch {
+                return
+            }
             guard let self else { return }
             self.flush()
             self.flushTask = nil
