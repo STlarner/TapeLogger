@@ -14,12 +14,7 @@ struct PaymentLog: TapeLog {
     var title: String { "payments" }
     var level: TapeLevel { .notice }
     var color: TapeColor? {
-        TapeColor(
-            light: 0x1B8A3A,
-            dark: 0x30D158,
-            ansi: 40,
-            emoji: "💳"
-        )
+        TapeColor(light: 0x1B8A3A, dark: 0x30D158, ansi: 40)
     }
 
     var metadata: [String: TapeValue] {

@@ -39,7 +39,7 @@ struct ContentView: View {
                 }
 
                 Section("Custom log type") {
-                    row("💳 payments", "notice, own badge, metadata") {
+                    row("payments", "custom type, own color, metadata") {
                         Tape.log(
                             PaymentLog(
                                 "Charged the monthly plan",
@@ -47,7 +47,7 @@ struct ContentView: View {
                             )
                         )
                     }
-                    row("💳 payments", "same type, negative amount") {
+                    row("payments", "same type, negative amount") {
                         Tape.log(PaymentLog("Refund issued", amount: -4.50))
                     }
                 }
@@ -91,11 +91,14 @@ struct ContentView: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
+                    .foregroundStyle(.primary)
                 Text(subtitle)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .buttonStyle(.plain)
     }
 }
 
