@@ -1,18 +1,18 @@
 # TapeLogger
 
-### Your app's debug console. Always within reach.
+Structured logging and an in-app console for Swift.
 
-See what your app is doing while you're using it. TapeLogger brings your logs,
-HTTP requests, navigation and lifecycle events into a searchable SwiftUI
-console—with structured details a tap away, even without Xcode attached.
+Log from anywhere, then inspect entries in Xcode or directly in your app.
+Inspect a decoding error, check a request's headers and JSON body, or see which
+navigation event happened before an error—all in the same log history.
 
 **Swift 6 · iOS 17+ · No third-party dependencies · MIT**
 
 <table>
   <tr>
-    <th>Find the signal</th>
-    <th>Make yourself at home</th>
-    <th>Look inside a request</th>
+    <th>Console · Light</th>
+    <th>Console · Dark</th>
+    <th>HTTP details</th>
   </tr>
   <tr>
     <td><img src="docs/images/console-light.png" width="260" alt="TapeLogger in light mode showing HTTP, navigation, storage, payment and error entries with search and level filters"></td>
@@ -21,39 +21,39 @@ console—with structured details a tap away, even without Xcode attached.
   </tr>
 </table>
 
-*Real SwiftUI views from the demo, populated with sample data.*
+*Console and expanded HTTP card from the demo, using sample data.*
 
 ```swift
 import TapeLogger
 
-Tape.info("Loaded the catalog", metadata: ["items": 24, "cached": false])
-Tape.warning("Image cache miss", key: .storage)
-Tape.notice("Checkout completed", metadata: ["orderID": "demo-42"])
+Tape.debug("Cache hit", metadata: ["key": "feed", "items": 24])
+Tape.warning("Retrying request", metadata: ["attempt": 2])
+Tape.info("Database opened", key: .storage)
 ```
 
-## Less digging. More debugging.
+## Features
 
-- **Reproduce a bug and inspect it on the spot.** Open the console from a
-  floating button, a shake, or your own debug menu.
-- **Get past “something failed.”** Expand an entry for metadata, source,
-  error details and HTTP payloads. Copy the full entry into a bug report.
-- **Find the entry you need.** Search messages, errors, headers, bodies and
-  source filenames, then narrow the timeline by level.
-- **See the journey, not just the error.** Bring navigation, app lifecycle
-  and opted-in network activity into the same timeline as your own logs.
-- **Spot slow work.** Measure a sync or async operation and see its duration
-  alongside the event.
-- **Make important events recognizable.** Give payments, sync, or any app
-  feature its own log type, color and badge.
+- **SwiftUI console:** text search, level filters, expandable entries and copy.
+  Open it with a floating button, a device shake or your own debug menu.
+- **Structured entries:** eight log levels, metadata, source locations, errors,
+  stack traces and HTTP attachments.
+- **URLSession logging:** request/response pairs with a shared ID, duration,
+  sanitized headers and optional body previews. Opt in per session.
+- **Navigation and lifecycle:** adapters for UIKit navigation, SwiftUI paths,
+  app notifications and scene activity.
+- **Measurements:** wrap sync or async code to record its duration alongside
+  the log entry, without changing its return value or error handling.
+- **Custom log types and themes:** define a category's level, metadata, color
+  and badge once. The console supports light and dark appearances.
 
-Log once, then read the same entries in the in-app console, Xcode, a terminal,
-or Apple's unified log. Use just the core logger, or add the UI and adapters
-when you need them.
+The core is UI-free and keeps a bounded in-memory history. Sinks forward
+entries to console output or Apple's unified log; the UI and adapters are
+separate products.
 
-[Get started](#get-started) · [Examples](#put-it-to-work) ·
-[Network logging](#inspect-your-http-traffic) · [Full guide](docs/Guide.md)
+[Installation](#installation) · [Quick start](#quick-start) ·
+[Examples](#examples) · [Guide](docs/Guide.md)
 
-## Get started
+## Installation
 
 Add TapeLogger with Swift Package Manager:
 
@@ -63,13 +63,13 @@ Add TapeLogger with Swift Package Manager:
 
 Choose the products your app needs:
 
-| Product | What you get |
+| Product | Contents |
 | --- | --- |
 | `TapeLogger` | Structured logs, in-memory history, console output and unified logging |
 | `TapeLoggerUI` | The searchable SwiftUI console and presentation triggers |
 | `TapeLoggerAdapters` | Opt-in URLSession, UIKit navigation and app lifecycle events |
 
-### A working console in one small app
+## Quick start
 
 Add `TapeLogger` and `TapeLoggerUI` to your app target, then try this:
 
@@ -83,15 +83,15 @@ import TapeLoggerUI
 struct ExampleApp: App {
     init() {
         Tape.installRecommendedSinks(
-            subsystem: Bundle.main.bundleIdentifier ?? "com.example.shop"
+            subsystem: Bundle.main.bundleIdentifier ?? "com.example.app"
         )
     }
 
     var body: some Scene {
         WindowGroup {
-            Button("Load the catalog") {
-                Tape.info("Loaded the catalog", metadata: ["items": 24])
-                Tape.warning("Image cache miss", key: .storage)
+            Button("Generate logs") {
+                Tape.debug("Cache hit", metadata: ["key": "feed"])
+                Tape.warning("Retrying request", metadata: ["attempt": 2])
             }
             #if DEBUG
             .tapeConsole()
@@ -101,39 +101,38 @@ struct ExampleApp: App {
 }
 ```
 
-Run the app, tap **Load the catalog**, then tap the edge handle to reveal the
-floating debug button. Tap it again to open your logs. Drag the button wherever
-it suits you, or tuck it against either edge.
+Run the app and tap **Generate logs**. Tap the edge handle to reveal the
+floating debug button, then tap it to open the console. The button can be
+dragged or docked against either edge.
 
 Recommended sinks choose console output for debugging and private unified
 logging for Release. Your in-memory history is available independently.
 
-## Put it to work
+## Examples
 
-### Turn a failed checkout into an actionable report
+### Errors and metadata
 
-Keep the message readable and attach the information you'll need to diagnose
-the failure:
+Keep the message short and attach the underlying error and request context:
 
 ```swift
+import Foundation
 import TapeLogger
 
-enum CheckoutError: Error {
-    case paymentDeclined
-}
-
 Tape.error(
-    "Could not complete checkout",
-    error: CheckoutError.paymentDeclined,
-    metadata: ["orderID": "demo-42", "attempt": 2]
+    "Failed to decode response",
+    error: DecodingError.dataCorrupted(.init(
+        codingPath: [],
+        debugDescription: "Expected an array at the root"
+    )),
+    metadata: ["endpoint": "/feed", "status": 200]
 )
 ```
 
-Expand the card to inspect the error and metadata. Search for `demo-42` to find
-the order, or `paymentDeclined` to find the failure. Copy the entry when you're
-ready to share it.
+The expanded card shows the error, metadata and source location. Search for
+`/feed` or the error text to find it again. Copy includes the attached details,
+not just the message.
 
-### Find out where the wait is
+### Timing sync and async code
 
 Wrap an operation with `measure`. You get its result as usual, plus a log entry
 with the elapsed time—even if the operation throws.
@@ -142,8 +141,8 @@ with the elapsed time—even if the operation throws.
 import Foundation
 import TapeLogger
 
-func loadCatalog(from url: URL) async throws -> Data {
-    let (data, _) = try await Tape.measure("Load catalog") {
+func fetchData(from url: URL) async throws -> Data {
+    let (data, _) = try await Tape.measure("Fetch data") {
         try await URLSession.shared.data(from: url)
     }
     return data
@@ -153,11 +152,10 @@ func loadCatalog(from url: URL) async throws -> Data {
 It works with synchronous code too, and async measurements preserve your
 calling actor's isolation.
 
-### Inspect your HTTP traffic
+### URLSession logging
 
-See the URL, status, duration, sanitized headers and optional body previews
-without adding log calls around every request. Connect one adapter to a
-session, then use that session normally:
+Configure a session once to log its requests and responses, including status,
+duration, headers and optional body previews:
 
 ```swift
 import Foundation
@@ -195,105 +193,102 @@ Use body previews with test data: body contents are not automatically
 redacted. See the [network setup, privacy and request scope](docs/Guide.md#urlsession)
 before connecting a session with custom transport or authentication needs.
 
-### Follow a user's route through your app
+### Navigation and lifecycle events
 
-Log SwiftUI path changes and scene activity alongside your app's own events:
+Observe a SwiftUI navigation path and scene activity:
 
 ```swift
 import SwiftUI
 import TapeLoggerUI
 
-struct CatalogNavigation: View {
+struct NavigationExample: View {
     @State private var path: [Int] = []
 
     var body: some View {
         NavigationStack(path: $path) {
-            Button("Open product 42") { path.append(42) }
+            Button("Push detail") { path.append(1) }
                 .navigationDestination(for: Int.self) { id in
-                    Text("Product \(id)")
+                    Text("Detail \(id)")
                 }
         }
-        .tapeNavigation(path: $path, name: "shop") { "Product \($0)" }
-        .tapeSceneLifecycle(name: "shop")
+        .tapeNavigation(path: $path, name: "main") { "Detail \($0)" }
+        .tapeSceneLifecycle(name: "main")
     }
 }
 ```
 
-Now the timeline can tell you which screen opened before a failed request,
-or whether the scene went inactive during an operation. Working with UIKit?
-There are [navigation](docs/Guide.md#uikit-navigation) and
-[app lifecycle](docs/Guide.md#ownership-and-app-lifecycle) adapters too.
+Pushes, pops, path resets and scene changes appear alongside your other logs.
+UIKit apps can use the [navigation](docs/Guide.md#uikit-navigation) and
+[app lifecycle](docs/Guide.md#ownership-and-app-lifecycle) adapters.
 
-### Give your app's events their own identity
+### Custom log types
 
-Define the style and metadata once. Every payment event gets the same badge,
-color and structured details:
+Use `TapeLog` to define a category's defaults instead of repeating them at
+every call site:
 
 ```swift
 import TapeLogger
 
-struct PaymentLog: TapeLog {
+struct CacheLog: TapeLog {
     let message: String
-    let amount: Double
+    let cacheKey: String
 
-    var title: String { "payments" }
+    var title: String { "cache" }
+    var level: TapeLevel { .debug }
     var color: TapeColor? {
-        TapeColor(light: 0x7B1FA2, dark: 0xBF7FFF, ansi: 135, emoji: "💳")
+        TapeColor(light: 0x00796B, dark: 0x64D2FF, ansi: 80, emoji: "💾")
     }
     var metadata: [String: TapeValue] {
-        ["amount": .double(amount), "currency": "USD"]
+        ["key": .string(cacheKey)]
     }
 }
 
-Tape.log(PaymentLog(message: "Annual plan purchased", amount: 49))
+Tape.log(CacheLog(message: "Cache hit", cacheKey: "feed"))
 ```
 
-In Xcode, that becomes a recognizable entry like this (cropped for display):
+Xcode output (cropped for display):
 
 ```text
 ┌──────────────────────────────────────────────────
-│ 💳 info · payments | 21:30:34.584
-│ Annual plan purchased
-│ amount=49.0, currency=USD
+│ 💾 debug · cache | 21:30:34.584
+│ Cache hit
+│ key=feed
 └──────────────────────────────────────────────────
 ```
 
-The same event becomes a colored card in the app and colored output in a
-compatible terminal. Customize the shared `TapeTheme` to match your app's
-look across light and dark appearances—without changing logging call sites.
+The same category color is used for the in-app card and terminal output.
+`TapeTheme` can override category colors across destinations without changing
+the log type or its call sites.
 
-## Open it your way
+## Console presentation
 
-| Trigger | Best for |
+| Trigger | Behavior |
 | --- | --- |
-| `.button` | A draggable, dockable shortcut while developing |
-| `.shake` | A clean interface with a physical-device shake gesture |
-| `.none` | Your own debug menu or presentation of `TapeConsoleView()` |
+| `.button` | Draggable, dockable floating button |
+| `.shake` | Open with a physical-device shake gesture |
+| `.none` | Present `TapeConsoleView()` from your own debug UI |
 
 Pass the trigger to `.tapeConsole(trigger:)`. Keep the modifier inside
 `#if DEBUG`, as in the quick start, when the console is for development only.
 
-## Try the demo
+## Demo
 
-Open **[Demo/TapeDemo.xcodeproj](Demo/TapeDemo.xcodeproj)** and run it. Explore
-five tabs: **Logs**, **Network**, **SwiftUI**, **UIKit**, and **Lifecycle**.
-Try a request, push a screen, background the app, then open the console to
-see those events together.
+Open **[Demo/TapeDemo.xcodeproj](Demo/TapeDemo.xcodeproj)** and run it.
+Its five tabs cover **Logs**, **Network**, **SwiftUI**, **UIKit**, and
+**Lifecycle**. Generate entries, send requests or change navigation state,
+then inspect the resulting logs in the console.
 
 The demo includes custom logs, measurements, live GET/POST requests, failures,
 redaction, navigation changes and the movable console button. It's a local
 example app, not an extra dependency in your project.
 
-## Go deeper
+## Documentation
 
 - [Configuration, themes and output destinations](docs/Guide.md)
 - [Console delivery, flushing and unified-log privacy](docs/Guide.md#output-delivery-and-privacy-v0100)
 - [Adapter setup and supported capture scope](docs/Guide.md#automatic-event-sources)
 - [Build, test and refresh the screenshots](docs/Screenshots.md)
 - [Roadmap](ROADMAP.md)
-
-TapeLogger's core is UI-free, with bounded in-memory history and no third-party
-dependencies. Add the pieces you need and keep your existing app architecture.
 
 ## License
 
