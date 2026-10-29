@@ -265,11 +265,16 @@ supported target is iOS 17+.
 
 ## Roadmap
 
-- [ ] Filter by key in the UI
-- [ ] Pause / freeze the list
-- [ ] Export (text, JSON)
-- [ ] Network adapter (`Tape.session`), `TapeAdapter` for global installs
-- [ ] File persistence
+Short version, in the order it will be tackled:
+
+- [ ] `TapeLoggerAdapters`: `TapeAdapter` install/uninstall, lifecycle source
+- [ ] Network logging: explicit `Tape.session` wrapper, then opt-in `URLProtocol`
+- [ ] Console: filter by key, pause, entry detail, export
+- [ ] File persistence (`TapeFileSink`) and loading a saved session
+- [ ] Signposts, CI, DocC
+
+The full list, with the decisions already taken and the non-goals, lives in
+[ROADMAP.md](ROADMAP.md).
 
 ## License
 
