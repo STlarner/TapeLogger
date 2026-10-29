@@ -1,81 +1,77 @@
 # TapeLogger
 
-Logging for iOS that you can actually see: a colored console and a browsable
-SwiftUI console, rendered from the same data model.
+### Your app's debug console. Always within reach.
+
+See what your app is doing while you're using it. TapeLogger brings your logs,
+HTTP requests, navigation and lifecycle events into a searchable SwiftUI
+console—with structured details a tap away, even without Xcode attached.
+
+**Swift 6 · iOS 17+ · No third-party dependencies · MIT**
+
+<table>
+  <tr>
+    <th>Find the signal</th>
+    <th>Make yourself at home</th>
+    <th>Look inside a request</th>
+  </tr>
+  <tr>
+    <td><img src="docs/images/console-light.png" width="260" alt="TapeLogger in light mode showing HTTP, navigation, storage, payment and error entries with search and level filters"></td>
+    <td><img src="docs/images/console-dark.png" width="260" alt="The same TapeLogger console in dark mode with distinct colors for log categories"></td>
+    <td><img src="docs/images/http-details.png" width="260" alt="An expanded HTTP entry with timing, sanitized request headers, response headers and a JSON response body"></td>
+  </tr>
+</table>
+
+*Real SwiftUI views from the demo, populated with sample data.*
 
 ```swift
-Tape.info("app launched")
-Tape.warning("cache miss", metadata: ["key": "feed", "retry": 3])
-Tape.error(error)
+import TapeLogger
+
+Tape.info("Loaded the catalog", metadata: ["items": 24, "cached": false])
+Tape.warning("Image cache miss", key: .storage)
+Tape.notice("Checkout completed", metadata: ["orderID": "demo-42"])
 ```
 
-```
-┌──────────────────────────────────────────────────
-│ 📤 info · http-request | 21:30:34.584 | 584ms
-│ GET https://jsonplaceholder.typicode.com/users/1
-└──────────────────────────────────────────────────
-```
+## Less digging. More debugging.
 
-## Why
+- **Reproduce a bug and inspect it on the spot.** Open the console from a
+  floating button, a shake, or your own debug menu.
+- **Get past “something failed.”** Expand an entry for metadata, source,
+  error details and HTTP payloads. Copy the full entry into a bug report.
+- **Find the entry you need.** Search messages, errors, headers, bodies and
+  source filenames, then narrow the timeline by level.
+- **See the journey, not just the error.** Bring navigation, app lifecycle
+  and opted-in network activity into the same timeline as your own logs.
+- **Spot slow work.** Measure a sync or async operation and see its duration
+  alongside the event.
+- **Make important events recognizable.** Give payments, sync, or any app
+  feature its own log type, color and badge.
 
-Xcode's console does not support ANSI escape codes: coloring text with them
-there prints raw escape sequences (and can truncate the line). So the palette
-is semantic and every destination degrades it the best way it can:
+Log once, then read the same entries in the in-app console, Xcode, a terminal,
+or Apple's unified log. Use just the core logger, or add the UI and adapters
+when you need them.
 
-| Destination | How it looks |
-| --- | --- |
-| Terminal / CI | ANSI 256 color |
-| Xcode console | emoji badge |
-| In-app UI | full color, light and dark |
+[Get started](#get-started) · [Examples](#put-it-to-work) ·
+[Network logging](#inspect-your-http-traffic) · [Full guide](docs/Guide.md)
 
-The badge is a shape, not a colored circle, so levels stay distinguishable
-even when the console renders every emoji the same:
+## Get started
 
-| Level | Badge | Level | Badge |
-| --- | --- | --- | --- |
-| trace | 🔍 | warning | ⚠️ |
-| debug | 🐛 | error | ❌ |
-| info | ℹ️ | critical | 🔥 |
-| notice | 📣 | fault | 💀 |
-
-## Console output
-
-Every box is exactly `TapeConsoleCapabilities.maxWidth` wide (77 display columns by
-default, further capped to the terminal width when stdout is a terminal), so a
-run of entries lines up instead of looking like a ragged stack. Text that does
-not fit wraps on a space boundary and keeps the gutter; a single word wider
-than the box is hard-broken.
-
-```swift
-TapeConsoleCapabilities(mode: .emoji, maxWidth: 72)
-```
-
-Wrapping accounts for wide characters, combining marks and emoji clusters.
-Ambiguous-width characters use one column; individual terminals can choose
-different glyph widths. The right edge stays open on purpose to tolerate those
-differences. The in-app UI draws a full border instead.
-
-Payload terminal controls are escaped in all color modes. LF, CRLF and CR
-line endings retain the gutter, including in metadata and attachments. Only
-renderer-generated color codes are emitted as ANSI.
-
-The boxes in this document are cropped for readability.
-
-## Installation
+Add TapeLogger with Swift Package Manager:
 
 ```swift
 .package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.10.0")
 ```
 
-Products: `TapeLogger` (core, no dependencies), `TapeLoggerUI` (SwiftUI), and
-`TapeLoggerAdapters` (opt-in event sources).
+Choose the products your app needs:
 
-The latest published release is **v0.10.0**, including adapters, navigation,
-asynchronous console delivery, configurable OSLog privacy and actor-aware
-measurement. See [output delivery and privacy](#output-delivery-and-privacy-v0100)
-for the console delivery and unified-log privacy changes when upgrading.
+| Product | What you get |
+| --- | --- |
+| `TapeLogger` | Structured logs, in-memory history, console output and unified logging |
+| `TapeLoggerUI` | The searchable SwiftUI console and presentation triggers |
+| `TapeLoggerAdapters` | Opt-in URLSession, UIKit navigation and app lifecycle events |
 
-## Setup
+### A working console in one small app
+
+Add `TapeLogger` and `TapeLoggerUI` to your app target, then try this:
 
 ```swift
 import Foundation
@@ -87,241 +83,101 @@ import TapeLoggerUI
 struct ExampleApp: App {
     init() {
         Tape.installRecommendedSinks(
-            subsystem: Bundle.main.bundleIdentifier ?? "com.example.app"
+            subsystem: Bundle.main.bundleIdentifier ?? "com.example.shop"
         )
     }
 
     var body: some Scene {
         WindowGroup {
-            Text("Example app")
-                #if DEBUG
-                .tapeConsole()
-                #endif
+            Button("Load the catalog") {
+                Tape.info("Loaded the catalog", metadata: ["items": 24])
+                Tape.warning("Image cache miss", key: .storage)
+            }
+            #if DEBUG
+            .tapeConsole()
+            #endif
         }
     }
 }
 ```
 
-`installRecommendedSinks` picks the destinations for the current environment:
+Run the app, tap **Load the catalog**, then tap the edge handle to reveal the
+floating debug button. Tap it again to open your logs. Drag the button wherever
+it suits you, or tuck it against either edge.
 
-- **Debug build** → console output only. ANSI colors in a terminal, emoji
-  badges in the Xcode console, which would print escape codes as garbage.
-- **Release build** → unified log only, so entries stay readable in
-  Console.app, Instruments and `log stream`.
-- **Debug build outside the Xcode console** (device launched from springboard,
-  CI) → both, since the emoji output would otherwise go nowhere.
+Recommended sinks choose console output for debugging and private unified
+logging for Release. Your in-memory history is available independently.
 
-The unified log is skipped while the Xcode console is the destination: the
-same entry would show up twice, once as a box and once as a plain
-`subsystem:category` line. Build the sink list by hand if you want a different
-trade-off:
+## Put it to work
 
-```swift
-Tape.shared.removeAllSinks()
-Tape.shared.addSink(TapeConsoleSink())
-Tape.shared.addSink(
-    TapeOSLogSink(subsystem: "com.example.app", category: "app")
-)
-```
+### Turn a failed checkout into an actionable report
 
-Forwarding to the unified log works in one direction only: reading it back is
-not possible on iOS, no public framework exposes it.
-
-### Output delivery and privacy (v0.10.0)
-
-Console rendering and stdout writes run on a serial worker. Recording never
-waits for the terminal. Each sink queues at most `maximumPendingEntries`
-(default 256), plus the entry currently being written. When full, it drops
-**new console entries**, not history in `TapeStore`. Copies of a sink share
-the worker and `droppedEntryCount`. Entries accepted by that worker retain
-enqueue order. Custom renderers must not log back into console output; those
-recursive console deliveries are suppressed.
-
-Retain the sink when a command-line tool needs to drain output before exit:
-
-```swift
-func writeFinalMessage() async {
-    let console = TapeConsoleSink(maximumPendingEntries: 512)
-    let tape = Tape(sinks: [console])
-    tape.info("Finished")
-    await console.flush()
-}
-```
-
-`flush()` suspends until the worker is idle; a stalled stdout reader can keep
-it suspended. Do not call it from a renderer. Process termination does not
-automatically flush queued output.
-
-**Unified-log messages are private by default**, including the recommended
-Release setup. This policy covers the entire formatted entry: message,
-metadata, duration and attachments. For non-sensitive diagnostics that must
-remain readable in Console.app, explicitly opt in:
-
-```swift
-let publicLog = TapeOSLogSink(
-    subsystem: "com.example.app", privacy: .public
-)
-```
-
-Public output can expose personal data and credentials. Network redaction is
-not a substitute for reviewing arbitrary messages and bodies. The in-memory
-store, copied text and stdout are not protected by OSLog privacy annotations;
-avoid recording sensitive content in the first place. Unified logging also
-has platform-controlled message-size limits; the store keeps the full entry.
-
-## Usage
+Keep the message readable and attach the information you'll need to diagnose
+the failure:
 
 ```swift
 import TapeLogger
 
-// Levels match os.Logger: trace, debug, info, notice, warning, error,
-// critical, fault.
-Tape.debug("cache hit", metadata: ["key": "feed"])
-Tape.notice("session refreshed")
-
-// A custom log type brings its own header, level and color (see below).
-Tape.log(NavigationLog("Push RoomRoute"))
-
-// Measured duration.
-let users = try await Tape.measure("load users") { try await api.users() }
-```
-
-Use `Tape.log(...)` for a custom log type or when the level comes from a
-variable, and the `trace`/`debug`/`info`/`warning`/`error`/`critical`/`fault`
-helpers otherwise.
-`Tape.error(_:error:)` keeps the error description as an expandable
-attachment instead of appending it to the message. Built-in text destinations
-include that attachment, along with stack traces and custom payloads.
-Async `measure` preserves the calling actor's isolation, including main-actor
-work and non-Sendable results. Extremely large durations saturate their whole-
-millisecond representation at `Int.min` or `Int.max` rather than trapping.
-
-## Custom log types
-
-A log type is a struct that describes itself: header, level, color, badge.
-The same shape as a custom log class in talker, and the call site never names
-a level.
-
-```swift
-struct NavigationLog: TapeLog {
-    let message: String
-
-    init(_ message: String) {
-        self.message = message
-    }
-
-    var title: String { "route" }
-    var level: TapeLevel { .debug }
-    var color: TapeColor? {
-        TapeColor(light: 0x7B1FA2, dark: 0xAF5FFF, ansi: 135, emoji: "🧭")
-    }
+enum CheckoutError: Error {
+    case paymentDeclined
 }
 
-Tape.log(NavigationLog("Push RoomRoute"))
+Tape.error(
+    "Could not complete checkout",
+    error: CheckoutError.paymentDeclined,
+    metadata: ["orderID": "demo-42", "attempt": 2]
+)
 ```
 
-```
-┌────────────────────────────────────────────────────────────────────────────
-│ 🧭 debug · route | 21:30:34.584
-│ Push RoomRoute
-└────────────────────────────────────────────────────────────────────────────
-```
+Expand the card to inspect the error and metadata. Search for `demo-42` to find
+the order, or `paymentDeclined` to find the failure. Copy the entry when you're
+ready to share it.
 
-Only `message` and `title` are required; `level` is `.info` by default and
-`color` falls back to the level color. `key` defaults to `title` and is the
-identity used for theme overrides and filtering.
+### Find out where the wait is
 
-A type can also carry its own severity, which is how a warning or an error
-keeps its level without giving up the header:
+Wrap an operation with `measure`. You get its result as usual, plus a log entry
+with the elapsed time—even if the operation throws.
 
 ```swift
-struct SyncLog: TapeLog {
-    let message: String
-    let level: TapeLevel
-    var title: String { "sync" }
-}
-
-Tape.log(SyncLog(message: "push failed", level: .error))
-```
-
-Because the entry keeps its key, one theme edit rebrands the stream across
-the app without touching call sites:
-
-```swift
-var theme = TapeTheme.default
-theme.keys["route"] = TapeColor(light: 0x0B6E99, dark: 0x64D2FF, ansi: 80, emoji: "🗺️")
-```
-
-```swift
-TapeConsoleView(theme: theme)
-```
-
-For one-off calls that do not deserve a type, the level helpers still accept
-a key, either one of the built-ins (`.httpRequest`, `.httpResponse`,
-`.httpError`, `.navigation`, `.storage`, `.lifecycle`) or your own:
-
-```swift
-let payments = TapeKey("payments", level: .notice)
-Tape.notice("charged 12.00", key: payments)
-```
-
-## UI
-
-```swift
-import TapeLoggerUI
-
-WindowGroup {
-    ContentView()
-        #if DEBUG
-        .tapeConsole(trigger: .shake)
-        #endif
-}
-```
-
-`trigger` chooses how the console opens:
-
-- `.button` (default): draggable floating button, initially half-hidden at the
-  right edge, raised above bottom bars. The docked handle shows an inward arrow:
-  tap it to reveal the full ladybug button, then tap again to open the console.
-  Drop it near the left or right edge to tuck half of it off-screen. Drag the
-  visible half inward to reveal it again; dropping it in the interior leaves
-  it fully visible there. During a drag, the arrow becomes the centered bug as
-  soon as the whole button is inside the screen (22 points inward), without
-  waiting for release. Position is kept while
-  the button is mounted and adapts to rotation/resizing, not persisted across
-  app launches. VoiceOver actions can dock or reveal the button without a drag.
-- `.shake`: shake the device, nothing visible on screen. Physical device only,
-  the Simulator has no such gesture.
-- `.none`: no trigger, present `TapeConsoleView()` yourself.
-
-The screen offers search, a filter per level and cards that expand to show
-metadata, source and attachments. It stays in sync with new entries and
-scrolls to the newest one when it opens.
-Search includes attachment details, HTTP headers/bodies and source filenames.
-Level filters announce whether they are included or excluded to accessibility.
-Clear resets every subscribed console and rejects buffered pre-clear entries.
-
-## Automatic event sources
-
-One explicit connection per source, then automatic entries. No swizzling,
-global navigation hooks, or third-party dependencies. Adapters accept a custom
-`Tape` instance; `.shared` is the default.
-
-### Ownership and app lifecycle
-
-Add the `TapeLoggerAdapters` product to the app target. Installation and removal
-run on the main actor. Keep one owner for the lifetime of the app:
-
-```swift
+import Foundation
 import TapeLogger
+
+func loadCatalog(from url: URL) async throws -> Data {
+    let (data, _) = try await Tape.measure("Load catalog") {
+        try await URLSession.shared.data(from: url)
+    }
+    return data
+}
+```
+
+It works with synchronous code too, and async measurements preserve your
+calling actor's isolation.
+
+### Inspect your HTTP traffic
+
+See the URL, status, duration, sanitized headers and optional body previews
+without adding log calls around every request. Connect one adapter to a
+session, then use that session normally:
+
+```swift
+import Foundation
 import TapeLoggerAdapters
 
 @MainActor
-final class LoggingSources {
+final class DebugNetwork {
     let adapters = TapeAdapters()
+    let session: URLSession
 
     init() throws {
-        try adapters.install(TapeLifecycleAdapter())
+        let network = TapeURLSessionAdapter(options: TapeNetworkOptions(
+            allowedHosts: ["api.example.com"],
+            logsBodies: true
+        ))
+        try adapters.install(network)
+
+        let configuration = URLSessionConfiguration.default
+        network.configure(configuration)
+        session = URLSession(configuration: configuration)
     }
 
     func stop() {
@@ -330,243 +186,115 @@ final class LoggingSources {
 }
 ```
 
-The owner retains installed adapters; installing the same instance twice does
-nothing. `removeAll()` uninstalls in reverse order and can be called repeatedly.
-Call it before releasing the owner; do not rely on deinitialization to restore
-delegates or stop network capture. Individual adapters also expose
-`install()` / `uninstall()` when the app manages their lifetime itself.
+Keep `DebugNetwork` alive while using its session; call `stop()` when finished.
+Request and response entries share a request ID, so you can search for the
+whole exchange. Body previews are opt-in and size-limited; sensitive headers
+and common credential query parameters are redacted.
 
-`TapeLifecycleAdapter` (UIKit platforms) observes foreground, background,
-active and inactive application notifications under `.lifecycle`. It does not
-infer launch or termination: iOS may kill an app without a callback. No battery,
-thermal, or other device-state monitoring is installed.
+Use body previews with test data: body contents are not automatically
+redacted. See the [network setup, privacy and request scope](docs/Guide.md#urlsession)
+before connecting a session with custom transport or authentication needs.
 
-For SwiftUI windows, attach `.tapeSceneLifecycle(name: "main")` to the root view.
-It records the initial `scenePhase` and subsequent changes, with `scope: scene`
-and the supplied name. App and scene events are distinct, not duplicates; use
-stable, different names for multiple windows.
+### Follow a user's route through your app
 
-### URLSession
-
-Install one network adapter and opt in each session **before creating it**:
-
-```swift
-import Foundation
-import TapeLoggerAdapters
-
-@MainActor
-func makeLoggedSession(adapters: TapeAdapters) throws -> URLSession {
-    let network = TapeURLSessionAdapter(
-        options: TapeNetworkOptions(
-            allowedHosts: ["api.example.com"]
-        )
-    )
-    try adapters.install(network)
-
-    let configuration = URLSessionConfiguration.default
-    network.configure(configuration)
-    return URLSession(configuration: configuration)
-}
-```
-
-Use the returned session normally, including `data(for:)` and `data(from:)`.
-The adapter logs `.httpRequest`, then `.httpResponse` or `.httpError`, with a
-shared `requestID`, duration and an HTTP attachment. HTTP 4xx/5xx are logged as
-errors but are still returned normally; transport failures and cancellation
-retain URLSession's throwing behavior. Redirect hops are separate exchanges,
-with redirect handling passed back to the original session.
-
-Requests and successful responses share the HTTP color, with distinct 📤 / 📥
-badges; HTTP failures remain red. Expanded cards show separately labeled
-request and response headers and bodies. Sanitized headers and captured bodies
-also appear in console boxes and copied text, with the same preview limits.
-
-**Privacy defaults:**
-
-- Bodies are off by default. `logsBodies: true` enables text/JSON/XML/form
-  previews, capped at `bodyLimit` (8 KB by default). Response data is forwarded
-  incrementally; only the bounded preview is retained. The app still receives
-  the entire response. Complete JSON is pretty-printed if it fits the cap.
-- Authorization, proxy authorization, cookies, set-cookie and `X-API-Key`
-  headers are redacted case-insensitively. Add names with `redactedHeaders`.
-- URL user/password and fragments are removed. Common sensitive query names
-  (including `token`, `access_token`, `api_key`, `password` and `code`) are
-  redacted; extend this with `redactedQueryItems`.
-- **Body contents, URL paths and arbitrary query names are not automatically
-  sanitized.** An echoed credential in a response body is still a credential.
-  Enable bodies only for appropriate test data.
-
-**Deliberate URLProtocol limitations:**
-
-- There is one active network adapter per process, shared by all opted-in
-  sessions. A second instance cannot install until the first is removed.
-  Settings are snapshotted per request. Removal stops new interceptions;
-  in-flight requests finish using their original settings.
-- Only HTTP(S) in configured foreground sessions is observed. `allowedHosts`
-  matches exact hosts, case-insensitively; an empty set allows all hosts.
-  Other hosts pass through untouched. `URLSession.shared`, existing sessions,
-  WebSockets, background sessions and traffic from other stacks are not covered.
-- Intercepted requests are forwarded by a standard internal URLSession. The
-  original session's custom transport configuration, cookies/cache stores,
-  proxy/TLS policy, custom authentication delegates, client certificates and
-  task metrics are **not** transparently reproduced. Do not opt in sessions
-  that depend on those features. This is a debugging transport, not a
-  drop-in production network interceptor.
-- URLSession can expose ordinary POST data as a stream. With body capture
-  enabled, a finite stream with a known `Content-Length` within `bodyLimit` is
-  buffered and replaced with the exact captured bytes before forwarding.
-  Larger or unknown-size streams are forwarded untouched, with an explicit
-  explanation instead of a misleading empty preview. Live streamed uploads
-  and general stream replay/retry remain unsupported.
-- No Alamofire-specific monitor or dependency is included. A library using a
-  URLSession can opt in through that session's configuration, subject to the
-  same limitations; this is not a guarantee of all Alamofire features.
-
-### UIKit navigation
-
-```swift
-import TapeLoggerAdapters
-import UIKit
-
-@MainActor
-func observeNavigation(
-    _ navigationController: UINavigationController,
-    adapters: TapeAdapters
-) throws {
-    try adapters.install(
-        TapeNavigationAdapter(
-            navigationController: navigationController,
-            name: "main"
-        )
-    )
-}
-```
-
-Install once per navigation controller. Stack changes are compared in
-`didShow`: pushes, pops, pop-to-root and replacements produce `.navigation`
-entries; a cancelled interactive pop does not. Destination names default to
-the controller's type; pass `describe:` to customize them without logging
-sensitive screen content.
-
-The adapter forwards the existing delegate's optional methods, including
-animation/interaction delegates, and restores it on removal. The app must keep
-its original delegate alive as usual. If the app replaces the navigation
-delegate later, observation stops; removal will not overwrite that replacement.
-This does not globally capture modal presentations or every controller's
-appearance/disappearance.
-
-### SwiftUI navigation
-
-No router or proprietary route protocol is required:
+Log SwiftUI path changes and scene activity alongside your app's own events:
 
 ```swift
 import SwiftUI
 import TapeLoggerUI
 
-struct RoutesExample: View {
-    @State private var routes: [Int] = []
+struct CatalogNavigation: View {
+    @State private var path: [Int] = []
 
     var body: some View {
-        NavigationStack(path: $routes) {
-            Button("Open detail") { routes.append(1) }
-                .navigationDestination(for: Int.self) { number in
-                    Text("Detail \(number)")
+        NavigationStack(path: $path) {
+            Button("Open product 42") { path.append(42) }
+                .navigationDestination(for: Int.self) { id in
+                    Text("Product \(id)")
                 }
         }
-        .tapeNavigation(path: $routes, name: "main") { "Detail \($0)" }
+        .tapeNavigation(path: $path, name: "shop") { "Product \($0)" }
+        .tapeSceneLifecycle(name: "shop")
     }
 }
 ```
 
-Attach once per stack. Typed paths distinguish prefix pushes/pops from
-replacements, including multi-route deep links and reset-to-root. `describe:`
-controls the destination name; the default is `String(describing:)`.
+Now the timeline can tell you which screen opened before a failed request,
+or whether the scene went inactive during an operation. Working with UIKit?
+There are [navigation](docs/Guide.md#uikit-navigation) and
+[app lifecycle](docs/Guide.md#ownership-and-app-lifecycle) adapters too.
 
-The same modifier accepts `Binding<NavigationPath>`, but that type hides its
-elements: only depth changes and same-depth replacements can be reported, not
-destination names. A replacement with a different depth looks like a push/pop.
+### Give your app's events their own identity
 
-SwiftUI logging describes **path state changes**, not animation completion;
-multiple mutations can be coalesced in one update. Unbound `NavigationLink`
-destinations, sheets, covers and tab selections are not automatically tracked.
+Define the style and metadata once. Every payment event gets the same badge,
+color and structured details:
 
-## Demo
+```swift
+import TapeLogger
 
-`Demo/` holds a small SwiftUI app that is **not part of the package**: SwiftPM
-only ships what is under `Sources/`, so nothing here reaches the consumers.
+struct PaymentLog: TapeLog {
+    let message: String
+    let amount: Double
 
-Open `Demo/TapeDemo.xcodeproj` and run it on a simulator or a device. The
-app has five tabs:
+    var title: String { "payments" }
+    var color: TapeColor? {
+        TapeColor(light: 0x7B1FA2, dark: 0xBF7FFF, ansi: 135, emoji: "💳")
+    }
+    var metadata: [String: TapeValue] {
+        ["amount": .double(amount), "currency": "USD"]
+    }
+}
 
-- **Logs:** all levels, custom types, metadata, measurements and console trigger.
-- **Network:** live GET/POST, redacted headers/query, 404, redirect, truncated
-  JSON, binary response, DNS failure, an excluded host and cancellation. Toggle
-  capture and body previews; the demo enables previews by default with a
-  512-byte cap. The library default remains body capture off.
-- **SwiftUI:** typed route arrays and opaque `NavigationPath`; push/pop,
-  multi-push, reset and replacement.
-- **UIKit:** a real navigation controller, stack operations and interactive
-  back gestures. Its original delegate sets a prompt to demonstrate forwarding.
-- **Lifecycle:** real app transitions, current scene state, recent events and
-  an application-observer toggle. Background the app and return to test it.
-
-The console is available across tabs. Network examples contact public HTTPS
-test services and require connectivity; their availability is not guaranteed.
-Launch with `--console-smoke` to seed 150 history entries and open the console
-directly; the final "Newest console entry" should be visible without scrolling.
-
-Shake needs a real device, the simulator has no motion gesture.
-
-## Architecture
-
-```
-Tape.log ──► TapeEntry ──┬─► TapeStore ──► AsyncStream ──► TapeConsoleView
-                         └─► TapeSink[] ──► TapeConsoleSink ──► TapeTextRenderer
-                                          └─► TapeOSLogSink
+Tape.log(PaymentLog(message: "Annual plan purchased", amount: 49))
 ```
 
-- **`TapeEntry`**: content only (level, key, message, metadata, duration,
-  attachment, source). It does not know how it will be displayed.
-- **`TapeSink`**: destination. `record` is synchronous and must not block; it
-  is called outside the locks, so it may log again (a thread-local guard
-  prevents infinite recursion).
-- **`TapeTextRenderer`**: turns an entry into text.
-- **`TapeTheme`**: `levels` plus per-`key` overrides; renderers never hardcode
-  a color.
+In Xcode, that becomes a recognizable entry like this (cropped for display):
 
-Hot path: short unfair-lock sections, no actor hop and no task per log. A
-console drain is scheduled once per burst. History is bounded (1000 entries
-by default) and the stream uses
-`.bufferingNewest(2000)`.
-
-## Tests
-
-```bash
-swift test
+```text
+┌──────────────────────────────────────────────────
+│ 💳 info · payments | 21:30:34.584
+│ Annual plan purchased
+│ amount=49.0, currency=USD
+└──────────────────────────────────────────────────
 ```
 
-macOS runs the core, network and navigation-state tests. The UIKit adapter
-suites require an iOS test destination; `build-for-testing` can compile them
-without launching a simulator.
+The same event becomes a colored card in the app and colored output in a
+compatible terminal. Customize the shared `TapeTheme` to match your app's
+look across light and dark appearances—without changing logging call sites.
 
-`Package.swift` declares `.macOS(.v14)` only so the tests can run locally: the
-supported target is iOS 17+.
+## Open it your way
 
-## Roadmap
+| Trigger | Best for |
+| --- | --- |
+| `.button` | A draggable, dockable shortcut while developing |
+| `.shake` | A clean interface with a physical-device shake gesture |
+| `.none` | Your own debug menu or presentation of `TapeConsoleView()` |
 
-Short version, in the order it will be tackled:
+Pass the trigger to `.tapeConsole(trigger:)`. Keep the modifier inside
+`#if DEBUG`, as in the quick start, when the console is for development only.
 
-- [x] Adapters, lifecycle, opt-in URLSession logging (v0.10.0)
-- [x] UIKit and SwiftUI navigation utilities (v0.10.0)
-- [x] Review hardening: bounded console output, private OSLog, reset-safe
-      consoles, actor-aware measurement and safe text rendering (v0.10.0)
-- [ ] Console: filter by key, pause, entry detail, export
-- [ ] File persistence (`TapeFileSink`) and loading a saved session
-- [ ] Signposts, CI, DocC
+## Try the demo
 
-The full list, with the decisions already taken and the non-goals, lives in
-[ROADMAP.md](ROADMAP.md).
+Open **[Demo/TapeDemo.xcodeproj](Demo/TapeDemo.xcodeproj)** and run it. Explore
+five tabs: **Logs**, **Network**, **SwiftUI**, **UIKit**, and **Lifecycle**.
+Try a request, push a screen, background the app, then open the console to
+see those events together.
+
+The demo includes custom logs, measurements, live GET/POST requests, failures,
+redaction, navigation changes and the movable console button. It's a local
+example app, not an extra dependency in your project.
+
+## Go deeper
+
+- [Configuration, themes and output destinations](docs/Guide.md)
+- [Console delivery, flushing and unified-log privacy](docs/Guide.md#output-delivery-and-privacy-v0100)
+- [Adapter setup and supported capture scope](docs/Guide.md#automatic-event-sources)
+- [Build, test and refresh the screenshots](docs/Screenshots.md)
+- [Roadmap](ROADMAP.md)
+
+TapeLogger's core is UI-free, with bounded in-memory history and no third-party
+dependencies. Add the pieces you need and keep your existing app architecture.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE)

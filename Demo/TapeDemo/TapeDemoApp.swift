@@ -24,13 +24,26 @@ struct TapeDemoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if consoleSmoke {
-                TapeConsoleView()
-                    .task { Tape.info("Newest console entry") }
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--screenshots") {
+                ScreenshotGallery()
             } else {
-                ContentView(services: services)
-                    .tapeSceneLifecycle(name: "demo")
+                demoContent
             }
+            #else
+            demoContent
+            #endif
+        }
+    }
+
+    @ViewBuilder
+    private var demoContent: some View {
+        if consoleSmoke {
+            TapeConsoleView()
+                .task { Tape.info("Newest console entry") }
+        } else {
+            ContentView(services: services)
+                .tapeSceneLifecycle(name: "demo")
         }
     }
 }
