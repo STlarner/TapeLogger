@@ -57,7 +57,13 @@ public final class Tape: Sendable {
     }
 
     public func removeAllSinks() {
-        state.withLock { $0.sinks.removeAll() }
+        let removed = state.withLock { state in
+            let removed = state.sinks
+            state.sinks = []
+            return removed
+        }
+        // A sink's destructor may log. Its last release must be unlocked too.
+        withExtendedLifetime(removed) {}
     }
 
     // MARK: - Recording
@@ -226,6 +232,7 @@ public final class Tape: Sendable {
         file: String = #fileID,
         function: String = #function,
         line: Int = #line,
+        isolation: isolated (any Actor)? = #isolation,
         _ body: () async throws -> T
     ) async rethrows -> T {
         let clock = ContinuousClock()

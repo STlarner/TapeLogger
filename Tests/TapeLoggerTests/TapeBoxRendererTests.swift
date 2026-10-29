@@ -264,4 +264,95 @@ struct TapeBoxRendererTests {
 
         #expect(first?.count == TapeBoxRenderer.minimumWidth)
     }
+
+    @Test("Every content section normalizes line endings and keeps empty rows")
+    func physicalLines() {
+        let entry = TapeEntry(
+            level: .info,
+            key: TapeKey("multi\r\nline"),
+            message: "one\r\ntwo\rthree\n\nfive",
+            metadata: ["payload\nkey": "first\r\nsecond"],
+            source: TapeSource(file: "File\nName.swift", function: "work"),
+            attachment: .custom(id: "test", payload: "custom\rpayload")
+        )
+        let output = TapeBoxRenderer(showsSource: true).render(
+            entry, context: TapeRenderContext(capabilities: .plain)
+        )
+        let rows = output.components(separatedBy: "\n")
+        #expect(!output.contains("\r"))
+        #expect(rows.dropFirst().dropLast().allSatisfy {
+            $0.hasPrefix("│ ")
+        })
+        #expect(output.contains("│ one\n│ two\n│ three\n│ \n│ five"))
+        #expect(output.contains("│ second"))
+        #expect(output.contains("│ custom\n│ payload"))
+    }
+
+    @Test("Payload terminal controls are escaped in every color mode",
+          arguments: [TapeConsoleCapabilities.plain, .emoji, .ansi])
+    func terminalControls(capabilities: TapeConsoleCapabilities) {
+        let payload = "hello\u{1B}[2J\u{1B}]0;spoof\u{7}\u{8}\t\u{9B}"
+        let entry = TapeEntry(
+            level: .info, message: payload,
+            metadata: ["control": "\u{1B}[H"],
+            attachment: .error("\u{1B}[31mROOT")
+        )
+        let output = TapeBoxRenderer().render(
+            entry, context: TapeRenderContext(capabilities: capabilities)
+        )
+        let body = output.replacingOccurrences(
+            of: "\u{1B}\\[[0-9;]*m", with: "", options: .regularExpression
+        )
+        #expect(!body.unicodeScalars.contains {
+            $0.value < 32 && $0.value != 10 || (127...159).contains($0.value)
+        })
+        #expect(body.contains("\\u{1b}[2J"))
+        #expect(body.contains("\\u{7}"))
+        #expect(entry.message == payload)
+    }
+
+    @Test("Wide characters and emoji wrap by display columns",
+          arguments: ["界", "😀", "👩‍💻", "🇮🇹", "❤️", "e\u{301}"])
+    func displayColumns(glyph: String) {
+        let entry = TapeEntry(
+            level: .info, message: String(repeating: glyph, count: 100)
+        )
+        let output = TapeBoxRenderer().render(
+            entry, context: TapeRenderContext(capabilities:
+                TapeConsoleCapabilities(mode: .none, maxWidth: 40))
+        )
+        let rows = output.components(separatedBy: "\n")
+        #expect(rows.allSatisfy { row in
+            row.reduce(0) { $0 + TapeTerminalText.columns($1) } <= 40
+        })
+        let restored = rows.dropFirst(2).dropLast()
+            .map { String($0.dropFirst(2)) }.joined()
+        #expect(restored == entry.message)
+    }
+
+    @Test("Large unbroken messages wrap without losing text")
+    func largeMessage() {
+        let message = String(repeating: "a", count: 800_000)
+        let wrapped = TapeBoxRenderer.wrap(message, width: 75)
+        #expect(wrapped.joined() == message)
+        #expect(wrapped.allSatisfy { $0.count <= 75 })
+    }
+
+    @Test("Every attachment is available in console and copied text")
+    func attachments() {
+        for attachment in [
+            TapeAttachment.error("ROOT CAUSE"),
+            .stackTrace("frame detail"),
+            .custom(id: "custom", payload: "custom detail"),
+        ] {
+            let entry = TapeEntry(
+                level: .error, message: "failure", attachment: attachment
+            )
+            let output = TapeBoxRenderer().render(
+                entry, context: TapeRenderContext(capabilities: .plain)
+            )
+            #expect(output.contains(attachment.text))
+            #expect(entry.copyText.contains(attachment.text))
+        }
+    }
 }

@@ -14,9 +14,9 @@ import Foundation
 /// does not fit wraps onto the next row on a space boundary, keeping the
 /// gutter; a single word longer than the box is hard-broken.
 ///
-/// The box is deliberately open on the right: closing it would require
-/// counting terminal columns, which breaks with wide characters and emoji.
-/// The UI draws a real border instead.
+/// The box stays open on the right because terminals disagree on some glyph
+/// widths. Wrapping budgets display columns, including wide text and emoji;
+/// the UI draws a real border instead.
 ///
 /// The level badge lives inside the header row, not before the border. An
 /// emoji glyph takes two terminal columns but counts as one `Character`, so
@@ -46,18 +46,11 @@ public struct TapeBoxRenderer: TapeTextRenderer {
         }
 
         var logicalLines = [header]
-        logicalLines.append(
-            contentsOf: entry.message.split(
-                separator: "\n",
-                omittingEmptySubsequences: false
-            ).map(String.init)
-        )
+        logicalLines.append(entry.message)
 
-        if case .http(let exchange) = entry.attachment,
-           !exchange.bodyText.isEmpty {
-            logicalLines.append(contentsOf: exchange.bodyText.components(
-                separatedBy: "\n"
-            ))
+        if let attachmentText = entry.attachment?.text,
+           !attachmentText.isEmpty {
+            logicalLines.append(attachmentText)
         }
 
         let metadataLine = metadataSummary(entry)
@@ -66,6 +59,7 @@ public struct TapeBoxRenderer: TapeTextRenderer {
         }
 
         let lines = logicalLines
+            .flatMap { TapeTerminalText.lines($0) }
             .flatMap { Self.wrap($0, width: textWidth) }
             .map { "│ " + $0 }
 
@@ -92,23 +86,38 @@ public struct TapeBoxRenderer: TapeTextRenderer {
     /// open.
     static func wrap(_ text: some StringProtocol, width: Int) -> [String] {
         guard width > 0 else { return [String(text)] }
-        guard text.count > width else { return [String(text)] }
-
         var lines: [String] = []
         var remaining = Substring(text)
 
-        while remaining.count > width {
-            let window = remaining.prefix(width)
-            if let space = window.lastIndex(of: " "), space != remaining.startIndex {
+        while !remaining.isEmpty {
+            var end = remaining.startIndex
+            var columns = 0
+            var lastSpace: String.Index?
+            while end < remaining.endIndex {
+                let character = remaining[end]
+                let nextColumns = TapeTerminalText.columns(character)
+                guard columns + nextColumns <= width else { break }
+                columns += nextColumns
+                if character == " " { lastSpace = end }
+                end = remaining.index(after: end)
+            }
+            if end == remaining.endIndex {
+                lines.append(String(remaining))
+                break
+            }
+            if let space = lastSpace, space != remaining.startIndex {
                 lines.append(String(remaining[remaining.startIndex..<space]))
                 remaining = remaining[remaining.index(after: space)...]
             } else {
-                lines.append(String(window))
-                remaining = remaining.dropFirst(width)
+                // Always advance, even if a glyph exceeds a caller's width.
+                if end == remaining.startIndex {
+                    end = remaining.index(after: end)
+                }
+                lines.append(String(remaining[..<end]))
+                remaining = remaining[end...]
             }
         }
-        lines.append(String(remaining))
-        return lines
+        return lines.isEmpty ? [""] : lines
     }
 
     /// `key=feed, retry=3` — greppable, one line, keys sorted.

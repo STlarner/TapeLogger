@@ -48,9 +48,30 @@ struct TapeHTTPTests {
             level: .info, key: .httpResponse, message: "POST /example → 200",
             attachment: .http(TapeHTTPExchange(
                 method: "POST", url: "https://example.com", statusCode: 200,
-                request: .init(body: #"{"sent":true}"#),
-                response: .init(body: #"{"received":true}"#)
+                request: .init(
+                    headers: ["Authorization": "<redacted>",
+                              "Accept": "application/json"],
+                    body: #"{"sent":true}"#
+                ),
+                response: .init(
+                    headers: ["X-Trace-ID": "abc"],
+                    body: #"{"received":true}"#
+                )
             ))
         )
+    }
+
+    @Test("Sanitized headers are labeled and sorted in copy and console output")
+    func headers() {
+        let entry = exchangeEntry()
+        for text in [entry.copyText, TapeBoxRenderer().render(
+            entry, context: TapeRenderContext(capabilities: .plain)
+        )] {
+            #expect(text.contains("Request headers:"))
+            #expect(text.contains("Response headers:"))
+            #expect(text.contains("Accept: application/json"))
+            #expect(text.contains("Authorization: <redacted>"))
+            #expect(text.contains("X-Trace-ID: abc"))
+        }
     }
 }

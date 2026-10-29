@@ -20,8 +20,10 @@ public final class TapeConsoleModel {
     private var pending: [TapeEntry] = []
     private var flushTask: Task<Void, Never>?
     private var consumptionID: UUID?
+    private var generation: UUID?
 
     public init(store: TapeStore = Tape.shared.store, maxEntries: Int = 1000) {
+        precondition(maxEntries > 0, "maxEntries must be positive")
         self.store = store
         self.maxEntries = maxEntries
         self.entries = Array(store.snapshot().suffix(maxEntries))
@@ -35,7 +37,8 @@ public final class TapeConsoleModel {
         flushTask?.cancel()
         flushTask = nil
         pending.removeAll(keepingCapacity: true)
-        let observation = store.snapshotAndStream()
+        let observation = store.snapshotAndEvents()
+        generation = observation.generation
         entries = Array(observation.snapshot.suffix(maxEntries))
         defer {
             if consumptionID == id {
@@ -45,16 +48,24 @@ public final class TapeConsoleModel {
                 consumptionID = nil
             }
         }
-        for await entry in observation.stream {
+        for await event in observation.stream {
             guard consumptionID == id else { break }
-            ingest(entry)
+            let current = store.generation
+            if generation != current { reset(to: current) }
+            switch event {
+            case .entry(let entry, let eventGeneration):
+                guard eventGeneration == current else { continue }
+                ingest(entry)
+            case .reset:
+                // The latest generation wins, not an older buffered reset.
+                break
+            }
         }
     }
 
     public func clear() {
-        pending.removeAll(keepingCapacity: true)
-        entries.removeAll()
         store.clear()
+        reset(to: store.generation)
     }
 
     public var visibleEntries: [TapeEntry] {
@@ -64,16 +75,26 @@ public final class TapeConsoleModel {
             guard selectedLevels.contains(entry.level) else { return false }
             guard !query.isEmpty else { return true }
 
-            if entry.message.lowercased().contains(query) { return true }
-            if entry.heading.lowercased().contains(query) { return true }
-            if entry.source?.function.lowercased().contains(query) == true { return true }
-            return entry.metadata.contains { key, value in
-                key.lowercased().contains(query) || value.description.lowercased().contains(query)
+            if entry.copyText.lowercased().contains(query) { return true }
+            if entry.source?.file.lowercased().contains(query) == true {
+                return true
             }
+            if entry.source?.short.lowercased().contains(query) == true {
+                return true
+            }
+            return entry.source?.function.lowercased().contains(query) == true
         }
     }
 
     // MARK: - Coalescing
+
+    private func reset(to generation: UUID) {
+        flushTask?.cancel()
+        flushTask = nil
+        pending.removeAll(keepingCapacity: true)
+        entries.removeAll()
+        self.generation = generation
+    }
 
     private func ingest(_ entry: TapeEntry) {
         pending.append(entry)
@@ -92,6 +113,11 @@ public final class TapeConsoleModel {
     }
 
     private func flush() {
+        let current = store.generation
+        guard generation == current else {
+            reset(to: current)
+            return
+        }
         guard !pending.isEmpty else { return }
 
         entries.append(contentsOf: pending)

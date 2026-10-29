@@ -5,10 +5,12 @@ import TapeLogger
 /// nothing at all.
 ///
 /// ```swift
-/// WindowGroup { ContentView() }
-///     #if DEBUG
-///     .tapeConsole(trigger: .button)
-///     #endif
+/// WindowGroup {
+///     ContentView()
+///         #if DEBUG
+///         .tapeConsole(trigger: .button)
+///         #endif
+/// }
 /// ```
 public struct TapeConsoleModifier: ViewModifier {
     private let store: TapeStore

@@ -40,7 +40,7 @@ even when the console renders every emoji the same:
 
 ## Console output
 
-Every box is exactly `TapeConsoleCapabilities.maxWidth` wide (77 characters by
+Every box is exactly `TapeConsoleCapabilities.maxWidth` wide (77 display columns by
 default, further capped to the terminal width when stdout is a terminal), so a
 run of entries lines up instead of looking like a ragged stack. Text that does
 not fit wraps on a space boundary and keeps the gutter; a single word wider
@@ -50,9 +50,14 @@ than the box is hard-broken.
 TapeConsoleCapabilities(mode: .emoji, maxWidth: 72)
 ```
 
-The right edge stays open on purpose: closing it would require counting
-terminal columns, which breaks as soon as a message contains a wide character
-or an emoji. The in-app UI draws a full border instead.
+Wrapping accounts for wide characters, combining marks and emoji clusters.
+Ambiguous-width characters use one column; individual terminals can choose
+different glyph widths. The right edge stays open on purpose to tolerate those
+differences. The in-app UI draws a full border instead.
+
+Payload terminal controls are escaped in all color modes. LF, CRLF and CR
+line endings retain the gutter, including in metadata and attachments. Only
+renderer-generated color codes are emitted as ANSI.
 
 The boxes in this document are cropped for readability.
 
@@ -65,21 +70,35 @@ The boxes in this document are cropped for readability.
 Products: `TapeLogger` (core, no dependencies), `TapeLoggerUI` (SwiftUI), and
 `TapeLoggerAdapters` (opt-in event sources, upcoming v0.10.0).
 
-The latest published release is v0.9.2. The adapter and navigation APIs below
-are implemented in this checkout for **v0.10.0, not yet released**. Until that
-tag exists, try them through a local package reference, as the demo does.
+The latest published release is v0.9.2. The adapter, navigation, asynchronous
+console, OSLog privacy and actor-aware measurement APIs below are implemented
+in this checkout for **v0.10.0, not yet released**. Until that tag exists, try
+them through a local package reference, as the demo does. After release, update
+the installation requirement above to `from: "0.10.0"`.
 
 ## Setup
 
 ```swift
+import Foundation
+import SwiftUI
 import TapeLogger
+import TapeLoggerUI
 
 @main
-struct App: App {
+struct ExampleApp: App {
     init() {
         Tape.installRecommendedSinks(
             subsystem: Bundle.main.bundleIdentifier ?? "com.example.app"
         )
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            Text("Example app")
+                #if DEBUG
+                .tapeConsole()
+                #endif
+        }
     }
 }
 ```
@@ -109,6 +128,48 @@ Tape.shared.addSink(
 Forwarding to the unified log works in one direction only: reading it back is
 not possible on iOS, no public framework exposes it.
 
+### Output delivery and privacy (v0.10.0)
+
+Console rendering and stdout writes run on a serial worker. Recording never
+waits for the terminal. Each sink queues at most `maximumPendingEntries`
+(default 256), plus the entry currently being written. When full, it drops
+**new console entries**, not history in `TapeStore`. Copies of a sink share
+the worker and `droppedEntryCount`. Entries accepted by that worker retain
+enqueue order. Custom renderers must not log back into console output; those
+recursive console deliveries are suppressed.
+
+Retain the sink when a command-line tool needs to drain output before exit:
+
+```swift
+func writeFinalMessage() async {
+    let console = TapeConsoleSink(maximumPendingEntries: 512)
+    let tape = Tape(sinks: [console])
+    tape.info("Finished")
+    await console.flush()
+}
+```
+
+`flush()` suspends until the worker is idle; a stalled stdout reader can keep
+it suspended. Do not call it from a renderer. Process termination does not
+automatically flush queued output.
+
+**Unified-log messages are private by default**, including the recommended
+Release setup. This policy covers the entire formatted entry: message,
+metadata, duration and attachments. For non-sensitive diagnostics that must
+remain readable in Console.app, explicitly opt in:
+
+```swift
+let publicLog = TapeOSLogSink(
+    subsystem: "com.example.app", privacy: .public
+)
+```
+
+Public output can expose personal data and credentials. Network redaction is
+not a substitute for reviewing arbitrary messages and bodies. The in-memory
+store, copied text and stdout are not protected by OSLog privacy annotations;
+avoid recording sensitive content in the first place. Unified logging also
+has platform-controlled message-size limits; the store keeps the full entry.
+
 ## Usage
 
 ```swift
@@ -130,7 +191,11 @@ Use `Tape.log(...)` for a custom log type or when the level comes from a
 variable, and the `trace`/`debug`/`info`/`warning`/`error`/`critical`/`fault`
 helpers otherwise.
 `Tape.error(_:error:)` keeps the error description as an expandable
-attachment instead of appending it to the message.
+attachment instead of appending it to the message. Built-in text destinations
+include that attachment, along with stack traces and custom payloads.
+Async `measure` preserves the calling actor's isolation, including main-actor
+work and non-Sendable results. Extremely large durations saturate their whole-
+millisecond representation at `Int.min` or `Int.max` rather than trapping.
 
 ## Custom log types
 
@@ -233,6 +298,9 @@ WindowGroup {
 The screen offers search, a filter per level and cards that expand to show
 metadata, source and attachments. It stays in sync with new entries and
 scrolls to the newest one when it opens.
+Search includes attachment details, HTTP headers/bodies and source filenames.
+Level filters announce whether they are included or excluded to accessibility.
+Clear resets every subscribed console and rejects buffered pre-clear entries.
 
 ## Automatic event sources (upcoming v0.10.0)
 
@@ -311,8 +379,8 @@ with redirect handling passed back to the original session.
 
 Requests and successful responses share the HTTP color, with distinct 📤 / 📥
 badges; HTTP failures remain red. Expanded cards show separately labeled
-request and response bodies. Captured bodies also appear in console boxes and
-copied text, with the same preview limits.
+request and response headers and bodies. Sanitized headers and captured bodies
+also appear in console boxes and copied text, with the same preview limits.
 
 **Privacy defaults:**
 
@@ -467,8 +535,9 @@ Tape.log ──► TapeEntry ──┬─► TapeStore ──► AsyncStream ─
 - **`TapeTheme`**: `levels` plus per-`key` overrides; renderers never hardcode
   a color.
 
-Hot path: one unfair lock per entry, no actor and no task per log. History is
-bounded (1000 entries by default) and the stream uses
+Hot path: short unfair-lock sections, no actor hop and no task per log. A
+console drain is scheduled once per burst. History is bounded (1000 entries
+by default) and the stream uses
 `.bufferingNewest(2000)`.
 
 ## Tests
@@ -490,6 +559,8 @@ Short version, in the order it will be tackled:
 
 - [x] Adapters, lifecycle, opt-in URLSession logging (unreleased v0.10.0)
 - [x] UIKit and SwiftUI navigation utilities (unreleased v0.10.0)
+- [x] Review hardening: bounded console output, private OSLog, reset-safe
+      consoles, actor-aware measurement and safe text rendering (unreleased v0.10.0)
 - [ ] Console: filter by key, pause, entry detail, export
 - [ ] File persistence (`TapeFileSink`) and loading a saved session
 - [ ] Signposts, CI, DocC

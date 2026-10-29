@@ -123,6 +123,35 @@ public struct TapeHTTPExchange: Sendable {
         }
         return sections.joined(separator: "\n\n")
     }
+
+    /// Includes the sanitized headers captured by adapters, not raw traffic.
+    package var detailText: String {
+        var text = "\(method) \(url)"
+        if let statusCode { text += " → \(statusCode)" }
+        for (title, side) in [
+            ("Request headers", Optional(request)),
+            ("Response headers", response),
+        ] {
+            guard let side, !side.headers.isEmpty else { continue }
+            let headers = side.headers.sorted { $0.key < $1.key }
+                .map { "\($0.key): \($0.value)" }.joined(separator: "\n")
+            text += "\n\n\(title):\n\(headers)"
+        }
+        if !bodyText.isEmpty { text += "\n\n\(bodyText)" }
+        return text
+    }
+}
+
+extension TapeAttachment {
+    /// Shared by copy/export and built-in text destinations.
+    package var text: String {
+        switch self {
+        case .error(let description): description
+        case .stackTrace(let trace): trace
+        case .custom(_, let payload): payload
+        case .http(let exchange): exchange.detailText
+        }
+    }
 }
 
 // MARK: - Copy / export
@@ -139,24 +168,7 @@ extension TapeEntry {
             let sorted = metadata.sorted { $0.key < $1.key }
             text += "\n" + sorted.map { "  \($0.key): \($0.value.description)" }.joined(separator: "\n")
         }
-        switch attachment {
-        case .error(let description):
-            text += "\n\n\(description)"
-        case .stackTrace(let trace):
-            text += "\n\n\(trace)"
-        case .http(let exchange):
-            text += "\n\n\(exchange.method) \(exchange.url)"
-            if let statusCode = exchange.statusCode {
-                text += " → \(statusCode)"
-            }
-            if !exchange.bodyText.isEmpty {
-                text += "\n\n\(exchange.bodyText)"
-            }
-        case .custom(_, let payload):
-            text += "\n\n\(payload)"
-        case .none:
-            break
-        }
+        if let attachment { text += "\n\n\(attachment.text)" }
         return text
     }
 }

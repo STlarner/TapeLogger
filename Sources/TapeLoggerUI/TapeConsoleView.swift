@@ -132,5 +132,7 @@ public struct TapeConsoleView: View {
                 }
         }
         .buttonStyle(.plain)
+        .accessibilityValue(isOn ? "Included" : "Excluded")
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }

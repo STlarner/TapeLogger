@@ -112,11 +112,36 @@ public struct TapeEntryCard: View {
             }
 
             if case .http(let exchange) = entry.attachment {
+                headerSection("Request headers", side: exchange.request)
                 bodySection("Request body", side: exchange.request)
                 if let response = exchange.response {
+                    headerSection("Response headers", side: response)
                     bodySection("Response body", side: response)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func headerSection(
+        _ title: String, side: TapeHTTPExchange.Side
+    ) -> some View {
+        if !side.headers.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).fontWeight(.semibold)
+                Text(side.headers.sorted { $0.key < $1.key }
+                    .map { "\($0.key): \($0.value)" }
+                    .joined(separator: "\n"))
+                    .textSelection(.enabled)
+            }
+            .font(.system(.caption2, design: .monospaced))
+            .foregroundStyle(theme.text.color(for: colorScheme))
+            .padding(8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                theme.background.color(for: colorScheme),
+                in: .rect(cornerRadius: 8)
+            )
         }
     }
 

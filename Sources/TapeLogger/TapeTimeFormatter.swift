@@ -30,9 +30,16 @@ public enum TapeTimeFormatter {
 }
 
 extension Duration {
-    /// Whole milliseconds, for the `584ms` badge.
+    /// Whole milliseconds, for the `584ms` badge. Values outside `Int`'s
+    /// range saturate at its bounds instead of trapping during rendering.
     public var tapeMilliseconds: Int {
         let (seconds, attoseconds) = components
-        return Int(seconds) * 1000 + Int(attoseconds / 1_000_000_000_000_000)
+        let (whole, overflow) = Int(clamping: seconds)
+            .multipliedReportingOverflow(by: 1000)
+        guard !overflow else { return seconds < 0 ? .min : .max }
+        let fraction = Int(attoseconds / 1_000_000_000_000_000)
+        let (total, additionOverflow) = whole.addingReportingOverflow(fraction)
+        guard !additionOverflow else { return seconds < 0 ? .min : .max }
+        return total
     }
 }

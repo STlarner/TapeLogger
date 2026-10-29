@@ -13,7 +13,7 @@ public struct TapeConsoleCapabilities: Sendable, Hashable {
     }
 
     public var mode: ColorMode
-    /// Width of the console box in characters. Every box uses it, so a run
+    /// Width of the console box in display columns. Every box uses it, so a run
     /// of entries lines up; longer text wraps instead of widening the box.
     /// The default leaves room for the Xcode console, which is usually
     /// narrower than a maximized terminal.

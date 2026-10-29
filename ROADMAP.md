@@ -6,7 +6,22 @@ A new session should be able to pick the first unchecked item and start.
 Current release: **v0.9.2**.
 
 Next release: **v0.10.0 (implemented, not tagged)** — lifecycle, opt-in
-URLSession logging, UIKit/SwiftUI navigation, and the five-tab demo.
+URLSession logging, UIKit/SwiftUI navigation, the five-tab demo, and review
+hardening. This minor version includes new console delivery/flush controls,
+private-by-default configurable OSLog output and actor-aware async measurement.
+
+## Review hardening (unreleased v0.10.0)
+
+- [x] Release removed sinks outside the logger lock and reclaim recursion TLS.
+- [x] Bound asynchronous console output, expose drops and asynchronous flush.
+- [x] Linear-time, display-column wrapping; escape payload terminal controls
+      and normalize physical lines throughout rendered entries.
+- [x] Include all attachments and sanitized HTTP headers in text destinations.
+- [x] Private unified-log entries by default, with explicit public opt-in.
+- [x] Generation-aware console resets, including buffered and dropped events.
+- [x] Preserve async measurement actor isolation and saturate duration overflow.
+- [x] Search attachment/source details, expose filter accessibility state,
+      and correct integration documentation.
 
 ## Shipped
 

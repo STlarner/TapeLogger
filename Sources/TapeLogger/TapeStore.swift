@@ -11,9 +11,16 @@ public final class TapeStore: Sendable {
     public let capacity: Int
     public let streamBufferSize: Int
 
+    package enum Event: Sendable {
+        case entry(TapeEntry, generation: UUID)
+        case reset(generation: UUID)
+    }
+
     private struct State: Sendable {
         var entries: [TapeEntry] = []
         var continuations: [UUID: AsyncStream<TapeEntry>.Continuation] = [:]
+        var observers: [UUID: AsyncStream<Event>.Continuation] = [:]
+        var generation = UUID()
     }
 
     private let state: OSAllocatedUnfairLock<State>
@@ -46,6 +53,9 @@ public final class TapeStore: Sendable {
             for continuation in state.continuations.values {
                 continuation.yield(entry)
             }
+            for observer in state.observers.values {
+                observer.yield(.entry(entry, generation: state.generation))
+            }
         }
     }
 
@@ -55,8 +65,16 @@ public final class TapeStore: Sendable {
     }
 
     public func clear() {
-        state.withLock { $0.entries.removeAll() }
+        state.withLock { state in
+            state.entries.removeAll()
+            state.generation = UUID()
+            for observer in state.observers.values {
+                observer.yield(.reset(generation: state.generation))
+            }
+        }
     }
+
+    package var generation: UUID { state.withLock { $0.generation } }
 
     public var count: Int {
         state.withLock { $0.entries.count }
@@ -91,5 +109,24 @@ public final class TapeStore: Sendable {
             return state.entries
         }
         return (snapshot, stream)
+    }
+
+    /// Console events carry a generation even when a reset is dropped by a
+    /// newest-N buffer. The public entry-only stream keeps its existing API.
+    package func snapshotAndEvents() -> (
+        snapshot: [TapeEntry], generation: UUID, stream: AsyncStream<Event>
+    ) {
+        let (stream, continuation) = AsyncStream<Event>.makeStream(
+            bufferingPolicy: .bufferingNewest(streamBufferSize)
+        )
+        let id = UUID()
+        continuation.onTermination = { [state] _ in
+            state.withLock { $0.observers[id] = nil }
+        }
+        let snapshot = state.withLock { state in
+            state.observers[id] = continuation
+            return (state.entries, state.generation)
+        }
+        return (snapshot.0, snapshot.1, stream)
     }
 }

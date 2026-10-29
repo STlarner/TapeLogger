@@ -185,10 +185,12 @@ public extension Tape {
         file: String = #fileID,
         function: String = #function,
         line: Int = #line,
+        isolation: isolated (any Actor)? = #isolation,
         _ body: () async throws -> T
     ) async rethrows -> T {
         try await shared.measure(label, key: key, metadata: metadata,
                                  file: file, function: function, line: line,
+                                 isolation: isolation,
                                  body)
     }
 }
