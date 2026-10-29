@@ -16,7 +16,7 @@ struct TapeLogTests {
         var title: String { "route" }
         var level: TapeLevel { .debug }
         var color: TapeColor? {
-            TapeColor(light: 0x7B1FA2, dark: 0xAF5FFF, ansi: 135, emoji: "🟪")
+            TapeColor(light: 0x7B1FA2, dark: 0xAF5FFF, ansi: 135, emoji: "🧭")
         }
     }
 
@@ -69,7 +69,7 @@ struct TapeLogTests {
             context: TapeRenderContext(theme: .default, capabilities: .emoji)
         )
 
-        #expect(output.contains("│ 🟪 debug · route |"))
+        #expect(output.contains("│ 🧭 debug · route |"))
         #expect(output.contains("│ Push RoomRoute"))
     }
 

@@ -59,7 +59,7 @@ The boxes in this document are cropped for readability.
 ## Installation
 
 ```swift
-.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.9.0")
+.package(url: "https://github.com/STlarner/TapeLogger.git", from: "0.9.1")
 ```
 
 Products: `TapeLogger` (core, no dependencies) and `TapeLoggerUI` (SwiftUI).
@@ -144,7 +144,7 @@ struct NavigationLog: TapeLog {
     var title: String { "route" }
     var level: TapeLevel { .debug }
     var color: TapeColor? {
-        TapeColor(light: 0x7B1FA2, dark: 0xAF5FFF, ansi: 135, emoji: "🟪")
+        TapeColor(light: 0x7B1FA2, dark: 0xAF5FFF, ansi: 135, emoji: "🧭")
     }
 }
 
@@ -153,7 +153,7 @@ Tape.log(NavigationLog("Push RoomRoute"))
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────
-│ 🟪 debug · route | 21:30:34.584
+│ 🧭 debug · route | 21:30:34.584
 │ Push RoomRoute
 └────────────────────────────────────────────────────────────────────────────
 ```
@@ -180,7 +180,7 @@ the app without touching call sites:
 
 ```swift
 var theme = TapeTheme.default
-theme.keys["route"] = TapeColor(light: 0x0B6E99, dark: 0x64D2FF, ansi: 80, emoji: "🧭")
+theme.keys["route"] = TapeColor(light: 0x0B6E99, dark: 0x64D2FF, ansi: 80, emoji: "🗺️")
 ```
 
 ```swift

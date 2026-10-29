@@ -78,7 +78,7 @@ public struct TapeKey: Hashable, Sendable, ExpressibleByStringLiteral {
         "navigation",
         title: "route",
         level: .debug,
-        color: TapeColor(light: 0x7B1FA2, dark: 0xAF5FFF, ansi: 135, emoji: "🟪")
+        color: TapeColor(light: 0x7B1FA2, dark: 0xAF5FFF, ansi: 135, emoji: "🧭")
     )
     public static let storage = TapeKey(
         "storage",

@@ -14,7 +14,7 @@ import Foundation
 ///     var title: String { "route" }
 ///     var level: TapeLevel { .debug }
 ///     var color: TapeColor? {
-///         TapeColor(light: 0x7B1FA2, dark: 0xAF5FFF, ansi: 135, emoji: "🟪")
+///         TapeColor(light: 0x7B1FA2, dark: 0xAF5FFF, ansi: 135, emoji: "🧭")
 ///     }
 /// }
 ///
