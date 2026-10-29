@@ -220,6 +220,19 @@ The screen offers search, a filter per level and cards that expand to show
 metadata, source and attachments. It stays in sync with new entries and
 scrolls to the newest one when it opens.
 
+## Demo
+
+`Demo/` holds a small SwiftUI app that is **not part of the package**: SwiftPM
+only ships what is under `Sources/`, so nothing here reaches the consumers.
+
+Open `Demo/TapeDemo.xcodeproj` and run it on a simulator or a device. The
+screen has one row per level (`trace` through `fault`, including an error with
+its details), a custom log type (`PaymentLog`) with its own badge and
+metadata, a metadata row and a measured block. The last section chooses how
+the console opens: floating ladybug button, shake, or never.
+
+Shake needs a real device, the simulator has no motion gesture.
+
 ## Architecture
 
 ```
