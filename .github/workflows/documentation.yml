@@ -31,12 +31,17 @@ jobs:
         run: python3 Scripts/build_documentation.py
       - name: Compile documentation examples
         run: python3 Scripts/check_examples.py
+      - name: Package PR preview
+        if: github.event_name == 'pull_request'
+        run: >-
+          tar -czf "$RUNNER_TEMP/documentation-preview.tar.gz"
+          -C .build/documentation/site .
       - name: Upload preview
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: documentation-preview
-          path: .build/documentation/site
+          path: ${{ runner.temp }}/documentation-preview.tar.gz
           if-no-files-found: error
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

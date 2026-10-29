@@ -27,6 +27,8 @@ comments in their Git tags; a separate versioned website is not generated yet.
 
 PRs do not get deployment credentials. The workflow uses `pull_request`, not
 `pull_request_target`. Fork code can be checked without publishing it.
+The preview artifact contains a tar archive: DocC symbol filenames contain
+colons, which cannot be uploaded as loose GitHub Actions artifact files.
 Superseded runs on the same ref are cancelled. Releases and tag pushes do not
 replace `main` documentation with a different version.
 
