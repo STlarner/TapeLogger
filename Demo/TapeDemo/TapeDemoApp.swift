@@ -10,8 +10,7 @@ struct TapeDemoApp: App {
         .contains("--console-smoke")
 
     init() {
-        // Console in debug builds, unified log in release builds, and only
-        // one of them when they would both write to Xcode's console.
+        // Select destinations for the build configuration and console environment.
         Tape.installRecommendedSinks(subsystem: "com.example.TapeDemo")
         _services = State(initialValue: DemoServices())
         Tape.info("TapeDemo launched")

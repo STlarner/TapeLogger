@@ -6,7 +6,7 @@ Instructions for anyone — human or agent — working on this repository.
 
 TapeLogger is a logging package for Apple platforms: a dependency-free core
 that records entries, plus a SwiftUI console to read them inside the app.
-It is the Swift answer to talker: one entry model, many renderers.
+One entry model is shared by the output destinations and in-app console.
 
 - Repository: <https://github.com/STlarner/TapeLogger> (public, MIT).
 - Minimum iOS 17. macOS 14 is declared only so `swift test` can run on a Mac.
@@ -27,8 +27,9 @@ It is the Swift answer to talker: one entry model, many renderers.
    ingestion, and do not allocate more than necessary per entry.
 4. **Sinks are `Sendable` and may log.** A sink that records an entry must not
    recurse: `TapeReentrancyGuard` already covers this, keep using it.
-5. **Never capture what the platform does not expose.** Reading back `os_log`
-   or `print` output is not possible on iOS. Logging is forward-only.
+5. **Logging is forward-only.** TapeLogger records explicit calls and events
+   from installed adapters. Do not add unified-log imports or interception of
+   third-party `os_log` or `print` calls as part of unrelated changes.
 6. **Public API changes are deliberate.** This package is consumed by real
    apps; renaming a type or a parameter is a breaking change and needs a
    minor or major version bump and a README update.
@@ -36,7 +37,7 @@ It is the Swift answer to talker: one entry model, many renderers.
 ## Layout
 
 ```
-Package.swift              products: TapeLogger, TapeLoggerUI
+Package.swift              products: TapeLogger, TapeLoggerUI, TapeLoggerAdapters
 Sources/TapeLogger/        core (Foundation + os only)
   Tape.swift               facade + hot path (record, log, levels, measure)
   Tape+Global.swift        static forwarders to Tape.shared
@@ -50,7 +51,7 @@ Sources/TapeLogger/        core (Foundation + os only)
   TapeValue.swift          metadata values (string, int, double, bool,
                            array, object, null, raw)
   TapeTheme.swift          TapeColor + semantic palette and overrides
-  TapeStore.swift          ring buffer + AsyncStream for the UI
+  TapeStore.swift          bounded history + AsyncStream for the UI
   TapeSink.swift           destination protocol
   TapeTimeFormatter.swift  HH:mm:ss.SSS
   TapeReentrancyGuard.swift
@@ -60,12 +61,12 @@ Sources/TapeLogger/        core (Foundation + os only)
   Sinks/TapeOSLogSink.swift
 Sources/TapeLoggerUI/      SwiftUI console (TapeConsoleView, TapeEntryCard,
                            TapeConsoleModel, tapeConsole modifier, triggers)
+Sources/TapeLoggerAdapters/ opt-in URLSession, UIKit navigation and app lifecycle
 Tests/TapeLoggerTests/     Swift Testing suites
 Demo/                      Xcode app, local package reference, not shipped
 ```
 
-The demo is part of the repository but not of the package: SwiftPM only
-distributes `Sources/`, so `Demo/` never reaches a consumer.
+The demo is part of the repository but is not included in the package products.
 
 ## Commands
 
@@ -82,9 +83,9 @@ another one):
 ```sh
 xcodebuild -project Demo/TapeDemo.xcodeproj -scheme TapeDemo \
   -destination 'platform=iOS Simulator,id=BE4551D2-761D-4F87-99A1-6DD1103F7B8C' \
-  -derivedDataPath "$TMPDIR/opencode/demo-dd" build
+  -derivedDataPath "$TMPDIR/TapeLogger/demo-dd" build
 xcrun simctl install BE4551D2-761D-4F87-99A1-6DD1103F7B8C \
-  "$TMPDIR/opencode/demo-dd/Build/Products/Debug-iphonesimulator/TapeDemo.app"
+  "$TMPDIR/TapeLogger/demo-dd/Build/Products/Debug-iphonesimulator/TapeDemo.app"
 xcrun simctl launch BE4551D2-761D-4F87-99A1-6DD1103F7B8C com.example.TapeDemo
 ```
 
@@ -118,6 +119,10 @@ causes confusing "no member" errors. Fix with a clean build folder
 ## Documentation
 
 - Public API comments are required, including extension members and defaults.
+- Describe implemented behavior and its scope. Do not infer platform-wide
+  impossibilities, automatic privacy guarantees or unmeasured performance claims.
+- Keep the Talker attribution and link in the README; API comments should explain
+  TapeLogger without requiring familiarity with another package.
 - Workflow guides live in the module's `.docc` catalog, not a duplicate manual.
 - `python3 Scripts/build_documentation.py` builds all iOS APIs and checks comment
   coverage with DocC warnings treated as errors.
@@ -130,28 +135,25 @@ causes confusing "no member" errors. Fix with a clean build folder
 
 - **Console width** is fixed (`maxWidth`, default 77) so a column of entries
   lines up; text wraps on spaces and hard-breaks words longer than the row.
-  The box is open on the right on purpose: closing it needs terminal column
-  counting, which breaks with wide characters.
-- **Level badge lives inside the header row**, not before the box: an emoji is
-  one `Character` but two terminal columns, so prefixing the block shifts the
-  top border off the body.
-- **ANSI is only used in a real terminal.** Xcode runs the app behind a
-  pseudo terminal, so `isatty` is true and `TERM` is set; the Xcode markers
-  (`XCODE_VERSION_ACTUAL`, `IDE_DISABLED_OS_ACTIVITY_DT_MODE`,
-  `__XCODE_BUILT_PRODUCTS_DIR_PATHS`, ...) are what keeps escape codes out of
-  its console.
+  The renderer enforces a minimum of 24 columns and leaves the right edge open
+  to tolerate terminal differences in glyph width.
+- **Level badge lives inside the header row**, not before the box, so wide
+  glyphs do not shift the left border.
+- **Automatic ANSI detection** requires terminal stdout, a nonempty `TERM`
+  other than `dumb`, and no recognized Xcode console markers. Explicit
+  capabilities can select a mode without detection.
 - **Color resolution**: theme override by key, then the color carried by the
   key or log type, then the level color. A key color without an emoji keeps
   the level badge.
 - **`Tape.installRecommendedSinks`** skips the unified log while the Xcode
-  console is the destination, otherwise every entry appears twice.
+  console is detected to avoid duplicate output across destinations.
 - **`TapeEntry.heading`** hides the key title when the key is the generic
   `.log`, so a plain `Tape.info` prints just `info`.
 
 ## Releasing
 
 1. `swift test` and the iOS build of `TapeLoggerUI` must pass.
-2. Update the `from:` version in README and the roadmap if a phase closed.
+2. Update the `from:` version in README.
 3. Commit, `git tag vX.Y.Z`, push `main` and the tag.
 4. Tag meaning: patch for fixes and wording, minor for new API, major for
    breaking changes.

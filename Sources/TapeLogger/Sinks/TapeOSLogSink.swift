@@ -1,11 +1,11 @@
 import Foundation
 import os
 
-/// Forwards entries to the unified log, so they stay visible in Console.app,
-/// Instruments and `log stream` while also appearing in the in-app console.
+/// Forwards entries to Apple's unified logging under a configurable privacy
+/// policy. OSLog controls persistence and visibility in diagnostic tools.
 ///
-/// This is the *forward* direction only: iOS gives no public API to read
-/// the unified log, so third-party `os_log` output cannot be captured.
+/// This sink does not read existing unified-log entries or intercept
+/// third-party `os_log` calls.
 public struct TapeOSLogSink: TapeSink {
     /// Applies to the entire formatted entry, including attachments and
     /// metadata. Public output is an explicit opt-in for non-sensitive data.

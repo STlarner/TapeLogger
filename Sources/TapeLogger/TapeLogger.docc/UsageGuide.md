@@ -12,8 +12,8 @@ presentation for each environment automatically:
 
 | Destination | How it looks |
 | --- | --- |
-| Terminal / CI | ANSI 256 color |
-| Xcode console | emoji badge |
+| Compatible terminal detected | ANSI 256 color |
+| Xcode console or non-terminal stdout | emoji badge |
 | In-app UI | full color, light and dark |
 
 Distinct badges help you recognize each level at a glance:
@@ -27,13 +27,14 @@ Distinct badges help you recognize each level at a glance:
 
 ## Console output
 
-Every box is exactly `TapeConsoleCapabilities.maxWidth` wide (77 display columns by
-default, further capped to the terminal width when stdout is a terminal), so a
-run of entries lines up instead of looking like a ragged stack. Text that does
-not fit wraps on a space boundary and keeps the gutter; a single word wider
-than the box is hard-broken.
+Boxes use a fixed display-column budget of 77 by default, with a minimum of 24.
+Automatic detection caps the default to reported terminal widths of at least
+40 columns. Borders use that width; body rows are not padded. Text wraps at
+spaces, and words wider than a row are hard-broken.
 
 ```swift
+import TapeLogger
+
 let capabilities = TapeConsoleCapabilities(mode: .emoji, maxWidth: 72)
 ```
 
@@ -57,8 +58,7 @@ The boxes in this document are cropped for readability.
 Products: `TapeLogger` (core, no dependencies), `TapeLoggerUI` (SwiftUI), and
 `TapeLoggerAdapters` (opt-in event sources).
 
-The installation example targets v0.10.0. This guide and the generated API
-reference track `main`, which may contain changes newer than that release.
+TapeLogger supports iOS 17 and later.
 
 ## Setup
 
@@ -90,8 +90,7 @@ struct ExampleApp: App {
 `installRecommendedSinks` picks the destinations for the current environment:
 
 - **Debug build in Xcode** → console boxes with recognizable emoji badges.
-- **Release build** → unified log only, so entries stay readable in
-  Console.app, Instruments and `log stream`.
+- **Release build** → unified logging with private message content.
 - **Debug build outside Xcode** → console and unified logging, with ANSI
   colors when connected to a compatible terminal.
 
@@ -99,6 +98,8 @@ Recommended sinks avoid duplicate output in Xcode. You can also choose
 destinations explicitly:
 
 ```swift
+import TapeLogger
+
 Tape.shared.removeAllSinks()
 Tape.shared.addSink(TapeConsoleSink())
 Tape.shared.addSink(
@@ -106,22 +107,25 @@ Tape.shared.addSink(
 )
 ```
 
-Forwarding to the unified log works in one direction only: reading it back is
-not possible on iOS, no public framework exposes it.
+TapeLogger forwards entries to unified logging. It does not import existing
+unified-log entries or intercept third-party `os_log` or `print` calls.
 
 ### Output delivery and privacy
 
-Console rendering and stdout writes run on a serial worker. Recording never
-waits for the terminal. Each sink queues at most `maximumPendingEntries`
-(default 256), plus the entry currently being written. When full, it drops
+`TapeConsoleSink` renders and writes stdout on a serial worker, so its `record`
+method does not wait for terminal I/O. Each console sink queues at most
+`maximumPendingEntries` (default 256), plus the entry currently being written.
+When full, it drops
 **new console entries**, not history in `TapeStore`. Copies of a sink share
 the worker and `droppedEntryCount`. Entries accepted by that worker retain
 enqueue order. Custom renderers must not log back into console output; those
 recursive console deliveries are suppressed.
 
-Retain the sink when a command-line tool needs to drain output before exit:
+Retain the sink and await `flush()` when output must finish before continuing:
 
 ```swift
+import TapeLogger
+
 func writeFinalMessage() async {
     let console = TapeConsoleSink(maximumPendingEntries: 512)
     let tape = Tape(sinks: [console])
@@ -140,6 +144,8 @@ metadata, duration and attachments. For non-sensitive diagnostics that must
 remain readable in Console.app, explicitly opt in:
 
 ```swift
+import TapeLogger
+
 let publicLog = TapeOSLogSink(
     subsystem: "com.example.app", privacy: .public
 )
@@ -166,14 +172,12 @@ let sorted = Tape.measure("Sort") { [3, 1, 2].sorted() }
 ```
 
 Use `Tape.log(...)` for a custom log type or when the level comes from a
-variable, and the `trace`/`debug`/`info`/`warning`/`error`/`critical`/`fault`
-helpers otherwise.
+variable, and the level-specific helpers otherwise.
 `Tape.error(_:error:)` keeps the error description as an expandable
 attachment instead of appending it to the message. Built-in text destinations
 include that attachment, along with stack traces and custom payloads.
 Async `measure` preserves the calling actor's isolation, including main-actor
-work and non-Sendable results. Extremely large durations saturate their whole-
-millisecond representation at `Int.min` or `Int.max` rather than trapping.
+work and non-Sendable results.
 
 ## Custom log types
 
@@ -181,6 +185,8 @@ A log type defines a header, level, color and badge once, so call sites can
 focus on the event being recorded.
 
 ```swift
+import TapeLogger
+
 struct NavigationLog: TapeLog {
     let message: String
 
@@ -195,24 +201,26 @@ struct NavigationLog: TapeLog {
     }
 }
 
-Tape.log(NavigationLog("Push RoomRoute"))
+Tape.log(NavigationLog("Open settings"))
 ```
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────
 │ 🧭 debug · route | 21:30:34.584
-│ Push RoomRoute
+│ Open settings
 └────────────────────────────────────────────────────────────────────────────
 ```
 
 Only `message` and `title` are required; `level` is `.info` by default and
 `color` falls back to the level color. `key` defaults to `title` and is the
-identity used for theme overrides and filtering.
+category identity used for theme overrides.
 
 A type can also carry its own severity, which is how a warning or an error
 keeps its level without giving up the header:
 
 ```swift
+import TapeLogger
+
 struct SyncLog: TapeLog {
     let message: String
     let level: TapeLevel
@@ -222,20 +230,28 @@ struct SyncLog: TapeLog {
 Tape.log(SyncLog(message: "push failed", level: .error))
 ```
 
-Because the entry keeps its key, one theme edit rebrands the stream across
-the app without touching call sites:
+Override a category's color without changing its log type or call sites:
 
 ```swift
+import TapeLogger
+import TapeLoggerUI
+
 var theme = TapeTheme.default
 theme.keys["route"] = TapeColor(light: 0x0B6E99, dark: 0x64D2FF, ansi: 80, emoji: "🗺️")
 let console = TapeConsoleView(theme: theme)
 ```
 
-For one-off calls that do not deserve a type, the level helpers still accept
-a key, either one of the built-ins (`.httpRequest`, `.httpResponse`,
+This example applies the theme to one console view. Pass the same theme to
+each console view and `TapeConsoleSink` that should use it; configuring a view
+does not update text sinks.
+
+For one-off calls, the level helpers also accept a key, either one of the
+built-ins (`.httpRequest`, `.httpResponse`,
 `.httpError`, `.navigation`, `.storage`, `.lifecycle`) or your own:
 
 ```swift
+import TapeLogger
+
 let payments = TapeKey("payments", level: .notice)
 Tape.notice("charged 12.00", key: payments)
 ```
@@ -243,6 +259,7 @@ Tape.notice("charged 12.00", key: payments)
 ## UI
 
 ```swift
+import SwiftUI
 import TapeLoggerUI
 
 struct DebugRoot: View {
@@ -262,13 +279,11 @@ struct DebugRoot: View {
   tap it to reveal the full ladybug button, then tap again to open the console.
   Drop it near the left or right edge to tuck half of it off-screen. Drag the
   visible half inward to reveal it again; dropping it in the interior leaves
-  it fully visible there. During a drag, the arrow becomes the centered bug as
-  soon as the whole button is inside the screen (22 points inward), without
-  waiting for release. Position is kept while
-  the button is mounted and adapts to rotation/resizing, not persisted across
-  app launches. VoiceOver actions can dock or reveal the button without a drag.
-- `.shake`: shake the device, nothing visible on screen. Physical device only,
-  the Simulator has no such gesture.
+  it fully visible there. Position is kept while the button is mounted and
+  adapts to rotation/resizing, but is not persisted across app launches.
+  VoiceOver actions can dock or reveal the button without a drag.
+- `.shake`: shake the device, nothing visible on screen. In Simulator, choose
+  **Device > Shake**.
 - `.none`: no trigger, present `TapeConsoleView()` yourself.
 
 The screen offers search, a filter per level and cards that expand to show
@@ -276,7 +291,8 @@ metadata, source and attachments. It stays in sync with new entries and
 scrolls to the newest one when it opens.
 Search includes attachment details, HTTP headers/bodies and source filenames.
 Level filters announce whether they are included or excluded to accessibility.
-Clear resets every subscribed console and rejects buffered pre-clear entries.
+Clear resets consoles consuming the same store and rejects buffered pre-clear
+entries.
 
 ## Automatic event sources
 
@@ -315,8 +331,7 @@ delegates or stop network capture. Individual adapters also expose
 
 `TapeLifecycleAdapter` (UIKit platforms) observes foreground, background,
 active and inactive application notifications under `.lifecycle`. It does not
-infer launch or termination: iOS may kill an app without a callback. No battery,
-thermal, or other device-state monitoring is installed.
+record launch or termination, or monitor battery, thermal or other device state.
 
 For SwiftUI windows, attach `.tapeSceneLifecycle(name: "main")` to the root view.
 It records the initial `scenePhase` and subsequent changes, with `scope: scene`
@@ -353,10 +368,11 @@ errors but are still returned normally; transport failures and cancellation
 retain URLSession's throwing behavior. Redirect hops are separate exchanges,
 with redirect handling passed back to the original session.
 
-Requests and successful responses share the HTTP color, with distinct 📤 / 📥
-badges; HTTP failures remain red. Expanded cards show separately labeled
-request and response headers and bodies. Sanitized headers and captured bodies
-also appear in console boxes and copied text, with the same preview limits.
+The built-in keys give requests and successful responses the same HTTP color,
+with distinct 📤 / 📥 badges; HTTP failures use the error color. Expanded cards
+show separately labeled request and response headers and bodies. Redacted
+headers and captured bodies also appear in console boxes and copied text, with
+the same preview limits. Theme overrides can change category colors and badges.
 
 **Privacy defaults:**
 
@@ -373,7 +389,7 @@ also appear in console boxes and copied text, with the same preview limits.
   sanitized.** An echoed credential in a response body is still a credential.
   Enable bodies only for appropriate test data.
 
-**Deliberate URLProtocol limitations:**
+**Adapter scope and transport limitations:**
 
 - There is one active network adapter per process, shared by all opted-in
   sessions. A second instance cannot install until the first is removed.
@@ -395,9 +411,8 @@ also appear in console boxes and copied text, with the same preview limits.
   Larger or unknown-size streams are forwarded untouched, with an explicit
   explanation instead of a misleading empty preview. Live streamed uploads
   and general stream replay/retry remain unsupported.
-- No Alamofire-specific monitor or dependency is included. A library using a
-  URLSession can opt in through that session's configuration, subject to the
-  same limitations; this is not a guarantee of all Alamofire features.
+- Libraries using URLSession can opt in through the session's configuration,
+  subject to the same transport limitations.
 
 ### UIKit navigation
 
@@ -434,7 +449,7 @@ appearance/disappearance.
 
 ### SwiftUI navigation
 
-No router or proprietary route protocol is required:
+Observe a SwiftUI navigation path directly:
 
 ```swift
 import SwiftUI
@@ -459,9 +474,9 @@ Attach once per stack. Typed paths distinguish prefix pushes/pops from
 replacements, including multi-route deep links and reset-to-root. `describe:`
 controls the destination name; the default is `String(describing:)`.
 
-The same modifier accepts `Binding<NavigationPath>`, but that type hides its
-elements: only depth changes and same-depth replacements can be reported, not
-destination names. A replacement with a different depth looks like a push/pop.
+The same modifier accepts `Binding<NavigationPath>`. For opaque paths, this
+adapter reports depth changes and same-depth replacements, not destination
+names. A replacement with a different depth is reported as a push/pop.
 
 SwiftUI logging describes **path state changes**, not animation completion;
 multiple mutations can be coalesced in one update. Unbound `NavigationLink`
@@ -469,8 +484,7 @@ destinations, sheets, covers and tab selections are not automatically tracked.
 
 ## Demo
 
-`Demo/` holds a small SwiftUI app that is **not part of the package**: SwiftPM
-only ships what is under `Sources/`, so nothing here reaches the consumers.
+`Demo/` holds a small SwiftUI app that is not included in the package products.
 
 Open `Demo/TapeDemo.xcodeproj` and run it on a simulator or a device. The
 app has five tabs:
@@ -483,16 +497,12 @@ app has five tabs:
 - **SwiftUI:** typed route arrays and opaque `NavigationPath`; push/pop,
   multi-push, reset and replacement.
 - **UIKit:** a real navigation controller, stack operations and interactive
-  back gestures. Its original delegate sets a prompt to demonstrate forwarding.
+  back gestures.
 - **Lifecycle:** real app transitions, current scene state, recent events and
   an application-observer toggle. Background the app and return to test it.
 
 The console is available across tabs. Network examples contact public HTTPS
 test services and require connectivity; their availability is not guaranteed.
-Launch with `--console-smoke` to seed 150 history entries and open the console
-directly; the final "Newest console entry" should be visible without scrolling.
-
-Shake needs a real device, the simulator has no motion gesture.
 
 ## Architecture
 
@@ -505,44 +515,17 @@ Tape.log ──► TapeEntry ──┬─► TapeStore ──► AsyncStream ─
 - **`TapeEntry`**: content only (level, key, message, metadata, duration,
   attachment, source). It does not know how it will be displayed.
 - **`TapeSink`**: destination. `record` is synchronous and must not block; it
-  is called outside the locks, so it may log again (a thread-local guard
-  prevents infinite recursion).
+  is called outside the logger's locks. Concurrent calls may reach sinks in a
+  different order from store history. A thread-local guard suppresses recursive
+  recording into the same logger.
 - **`TapeTextRenderer`**: turns an entry into text.
-- **`TapeTheme`**: `levels` plus per-`key` overrides; renderers never hardcode
-  a color.
+- **`TapeTheme`**: severity colors plus per-category overrides used by the
+  built-in renderers.
 
 Hot path: short unfair-lock sections, no actor hop and no task per log. A
 console drain is scheduled once per burst. History is bounded (1000 entries
 by default) and the stream uses
 `.bufferingNewest(2000)`.
-
-## Tests
-
-```bash
-swift test
-```
-
-macOS runs the core, network and navigation-state tests. The UIKit adapter
-suites require an iOS test destination; `build-for-testing` can compile them
-without launching a simulator.
-
-`Package.swift` declares `.macOS(.v14)` only so the tests can run locally: the
-supported target is iOS 17+.
-
-## Roadmap
-
-Short version, in the order it will be tackled:
-
-- [x] Adapters, lifecycle, opt-in URLSession logging (v0.10.0)
-- [x] UIKit and SwiftUI navigation utilities (v0.10.0)
-- [x] Review hardening: bounded console output, private OSLog, reset-safe
-      consoles, actor-aware measurement and safe text rendering (v0.10.0)
-- [ ] Console: filter by key, pause, entry detail, export
-- [ ] File persistence (`TapeFileSink`) and loading a saved session
-- [ ] Signposts, CI, DocC
-
-The full list, with the decisions already taken and the non-goals, lives in
-[roadmap](https://github.com/STlarner/TapeLogger/blob/main/ROADMAP.md).
 
 ## License
 

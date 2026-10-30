@@ -66,8 +66,10 @@ public struct TapeConsoleModifier: ViewModifier {
 public extension View {
     /// Installs the in-app console.
     /// - Parameters:
-    ///   - store: must be the store of the `Tape` instance you log through.
-    ///   - theme: palette shared with the console renderer.
+    ///   - store: History to display; defaults to the shared logger's store.
+    ///     Pass your logger's store when using a custom logger.
+    ///   - theme: Palette for the floating button and in-app console.
+    ///     Configure text sinks separately to use the same palette.
     ///   - trigger: `.button` (default), `.shake`, or `.none` if you present
     ///     `TapeConsoleView` yourself.
     func tapeConsole(

@@ -32,7 +32,7 @@ public struct TapeColor: Sendable, Hashable {
     }
 }
 
-/// Semantic palette. Renderers never hardcode a color: they ask the theme.
+/// Semantic palette used by built-in renderers and in-app controls.
 public struct TapeTheme: Sendable {
     /// Background behind the console's entry cards.
     public var background: TapeColor
@@ -44,8 +44,7 @@ public struct TapeTheme: Sendable {
     public var secondary: TapeColor
     /// Colors by severity. Missing levels fall back to the info color.
     public var levels: [TapeLevel: TapeColor]
-    /// Per-key override. Wins over the color the key carries itself, so an
-    /// app can rebrand a stream without touching the call sites.
+    /// Per-key colors, taking precedence over the color carried by a key.
     public var keys: [String: TapeColor]
 
     /// Builds a palette. Start from `TapeTheme.default` for selective overrides.
@@ -74,7 +73,7 @@ public struct TapeTheme: Sendable {
     }
 
     /// Resolution order: theme override, then the color the key carries,
-    /// then the level color. A custom log type therefore needs no theme.
+    /// then the entry's level color.
     public func color(for entry: TapeEntry) -> TapeColor {
         keys[entry.key.id] ?? entry.key.color ?? color(for: entry.level)
     }

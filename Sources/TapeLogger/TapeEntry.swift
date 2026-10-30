@@ -2,9 +2,8 @@ import Foundation
 
 /// A single log record.
 ///
-/// The entry is pure content: it never knows how it will be rendered.
-/// Console text, UI cards and JSON export are all derived from this type,
-/// which is why new destinations can be added without touching call sites.
+/// Stores content independently of presentation. Text renderers, sinks and
+/// in-app cards consume the same entry without changing recording call sites.
 public struct TapeEntry: Identifiable, Sendable {
     /// Identity used by UI lists; independent of date and sequence.
     public let id: UUID
@@ -96,7 +95,7 @@ public struct TapeSource: Sendable, Hashable {
         self.line = line
     }
 
-    /// `Tape.swift:42`
+    /// File name and line, such as `Tape.swift:42`.
     public var short: String {
         let name = file.split(separator: "/").last.map(String.init) ?? file
         return "\(name):\(line)"
@@ -105,10 +104,9 @@ public struct TapeSource: Sendable, Hashable {
 
 // MARK: - Attachment
 
-/// Typed payload for the detail screen, so the UI can render structured
-/// content instead of a blob of text.
+/// Typed details shown in expanded cards and built-in text destinations.
 public enum TapeAttachment: Sendable {
-    /// A structured HTTP exchange, already sanitized by its producer.
+    /// A structured HTTP exchange. Producers are responsible for redaction.
     case http(TapeHTTPExchange)
     /// An error description; the original error object is not retained.
     case error(String)
@@ -120,8 +118,10 @@ public enum TapeAttachment: Sendable {
 
 /// Request and optional response details captured by a network producer.
 ///
-/// This value does not perform I/O or redact content. Network adapters sanitize
-/// their output before constructing it; custom producers must do the same.
+/// This value does not perform I/O or redact content. The URLSession adapter
+/// redacts configured headers and query items and removes URL credentials and
+/// fragments. Opt-in body previews are not automatically redacted. Custom
+/// producers are responsible for reviewing and redacting their content.
 public struct TapeHTTPExchange: Sendable {
     /// Headers and an optional bounded body preview for one side of an exchange.
     public struct Side: Sendable {
@@ -151,7 +151,8 @@ public struct TapeHTTPExchange: Sendable {
 
     /// HTTP method, such as `GET` or `POST`.
     public var method: String
-    /// URL text, with credentials and sensitive query values removed by adapters.
+    /// URL text. The URLSession adapter removes credentials and fragments and
+    /// redacts configured query items; custom producers supply their own text.
     public var url: String
     /// Response status when available; transport failures may have none.
     public var statusCode: Int?
@@ -194,7 +195,7 @@ public struct TapeHTTPExchange: Sendable {
         return sections.joined(separator: "\n\n")
     }
 
-    /// Includes the sanitized headers captured by adapters, not raw traffic.
+    /// Formats supplied headers and body previews without further redaction.
     package var detailText: String {
         var text = "\(method) \(url)"
         if let statusCode { text += " → \(statusCode)" }
@@ -213,7 +214,7 @@ public struct TapeHTTPExchange: Sendable {
 }
 
 extension TapeAttachment {
-    /// Shared by copy/export and built-in text destinations.
+    /// Shared by copied text and built-in text destinations.
     package var text: String {
         switch self {
         case .error(let description): description
@@ -224,7 +225,7 @@ extension TapeAttachment {
     }
 }
 
-// MARK: - Copy / export
+// MARK: - Copied text
 
 extension TapeEntry {
     /// Plain text used by copying and unified logging. Includes time, severity,
@@ -246,17 +247,12 @@ extension TapeEntry {
 }
 
 extension TapeEntry {
-    /// The key title, or `nil` for the default `.log` key.
-    ///
-    /// The default key has nothing to say: printing "log" in front of every
-    /// entry that came from `Tape.info("...")` hides the level, which is the
-    /// only thing the reader actually needs. Renderers show the level instead
-    /// and add the key only when it carries information.
+    /// The key's display title, or `nil` when its identity matches `TapeKey.log`.
     public var keyTitle: String? {
         key.id == TapeKey.log.id ? nil : key.title
     }
 
-    /// Level first, then the key when it says something: `debug` or
+    /// Level followed by the non-default key title: `debug` or
     /// `error · http-request`.
     public var heading: String {
         guard let keyTitle else { return level.label }

@@ -1,19 +1,17 @@
 import Foundation
 
 extension Tape {
-    /// Installs the sinks that make sense in the current environment,
-    /// replacing whatever was configured before.
+    /// Replaces the shared logger's sinks according to the build configuration
+    /// and detected console environment.
     ///
-    /// - Debug builds render to the console: ANSI colors in a terminal, emoji
-    ///   badges in the Xcode console, which interprets no escape codes.
+    /// - Debug builds write to stdout: ANSI in a detected compatible terminal,
+    ///   emoji badges otherwise.
     /// - Release builds forward to the unified log with private message content.
-    /// - A debug build that does not run in the Xcode console gets both: the
-    ///   emoji console output is invisible outside a terminal, but the unified
-    ///   log keeps it.
+    /// - Debug builds without Xcode console markers also forward to unified
+    ///   logging, independently of whether stdout is being observed.
     ///
     /// The unified log is skipped while the Xcode console is the destination:
-    /// the same entry would appear twice, once as a box and once as a plain
-    /// `subsystem:category` line.
+    /// this avoids duplicate entries when Xcode displays both destinations.
     ///
     /// Operates on `Tape.shared`, not on custom logger instances. The selection
     /// uses the package's build configuration. This does not clear history or

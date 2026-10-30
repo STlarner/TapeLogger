@@ -1,7 +1,6 @@
 import Foundation
 
-/// A custom log type: the app declares its header, its level and its style,
-/// the way talker lets you subclass `TalkerLog`.
+/// An app-defined log type with a category, severity and optional color.
 ///
 /// ```swift
 /// struct NavigationLog: TapeLog {
@@ -18,7 +17,7 @@ import Foundation
 ///     }
 /// }
 ///
-/// Tape.log(NavigationLog("Push RoomRoute"))
+/// Tape.log(NavigationLog("Open settings"))
 /// ```
 ///
 /// Renderers and sinks only read the produced entry, so a custom type works
@@ -38,7 +37,7 @@ public protocol TapeLog: Sendable {
     var color: TapeColor? { get }
     /// Extra key/value pairs, rendered on their own line.
     var metadata: [String: TapeValue] { get }
-    /// Measured duration, when the entry comes from `measure`.
+    /// Optional elapsed time supplied by the custom log.
     var duration: Duration? { get }
     /// Expandable details shown under the message.
     var attachment: TapeAttachment? { get }

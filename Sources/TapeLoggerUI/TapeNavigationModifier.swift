@@ -41,8 +41,8 @@ extension View {
         }
     }
 
-    /// `NavigationPath` hides its elements: only depth and opaque replacement
-    /// events can be recorded. Typed arrays provide destination names.
+    /// Observes an opaque path's depth and replacement changes, without
+    /// destination names. Use the typed-array overload for route descriptions.
     /// A different-depth replacement looks like a push or pop. No initial event
     /// is emitted; callbacks describe state changes, not animation completion.
     ///

@@ -4,9 +4,8 @@ import TapeLogger
 
 /// State for the console screen.
 ///
-/// Entries arrive on an `AsyncStream` and are coalesced before touching the
-/// published array: appending one observable change per log would make the
-/// list unusable when the app logs in a loop.
+/// Streamed entries are coalesced into approximately 50 ms batches to reduce
+/// observable updates during bursts.
 @MainActor
 @Observable
 public final class TapeConsoleModel {
@@ -75,8 +74,9 @@ public final class TapeConsoleModel {
         }
     }
 
-    /// Clears the shared store and this model, invalidating pre-clear buffers.
-    /// Other consuming consoles observe the reset as they process updates.
+    /// Clears this model's backing store and local history, invalidating
+    /// pre-clear buffers. Other consoles consuming the same store observe the
+    /// reset as they process updates.
     public func clear() {
         store.clear()
         reset(to: store.generation)

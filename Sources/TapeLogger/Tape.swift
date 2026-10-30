@@ -12,7 +12,7 @@ import os
 ///
 /// Sendable on purpose: logs can be written from any thread or task.
 public final class Tape: Sendable {
-    /// Shared instance with a console sink attached.
+    /// Shared instance, initially configured with a console sink.
     public static let shared = Tape()
 
     /// History receiving accepted entries, independently of sink delivery.
@@ -153,8 +153,7 @@ public final class Tape: Sendable {
         )
     }
 
-    /// Records a custom log type: the type brings its own header, level,
-    /// color and metadata, so the call site never names a level.
+    /// Records a custom log's category, severity, style and content.
     ///
     /// ```swift
     /// struct EventLog: TapeLog {

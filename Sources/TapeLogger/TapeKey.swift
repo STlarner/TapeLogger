@@ -1,10 +1,9 @@
 import Foundation
 
-/// A semantic category for a log entry: a log type anyone can define.
+/// An app-defined or built-in category for a log entry.
 ///
-/// A key carries everything needed to present its stream — title, default
-/// level, and an optional color with its own emoji — so a custom log type
-/// works out of the box, with no theme edits:
+/// A key supplies a display title, default severity and optional color and
+/// badge. Built-in renderers use these defaults unless the theme overrides them:
 ///
 /// ```swift
 /// extension TapeKey {
@@ -18,8 +17,8 @@ import Foundation
 /// Tape.notice("charged 12.00", key: .payments)
 /// ```
 ///
-/// A theme can still override the color per key (`TapeTheme.keys`), which is
-/// how an app rebrands a stream without touching the call sites.
+/// `TapeTheme.keys` overrides colors by category identity without changing
+/// recording call sites.
 public struct TapeKey: Hashable, Sendable, ExpressibleByStringLiteral {
     /// Category identity, used for equality, hashing and theme overrides.
     public let id: String

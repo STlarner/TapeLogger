@@ -3,10 +3,9 @@ import os
 
 /// Bounded in-memory history plus a broadcast stream for observers.
 ///
-/// The hot path is a single unfair lock: no `await`, no actor hop, no task
-/// per log. Continuations are yielded *inside* the lock because `yield`
-/// never blocks and ordering matters; user callbacks are never invoked
-/// with the lock held.
+/// Appends update history and yield buffered stream events under one lock to
+/// preserve append order. The store does not await consumer processing or
+/// create a task for each entry.
 public final class TapeStore: Sendable {
     /// Maximum retained entries; must be positive.
     public let capacity: Int
@@ -113,8 +112,8 @@ public final class TapeStore: Sendable {
         }
     }
 
-    /// Registers before releasing the snapshot lock: the console cannot miss
-    /// entries between initializing its history and subscribing to updates.
+    /// Takes the snapshot and registers the stream under the same lock, avoiding
+    /// a subscription gap. Slow consumers can still overflow the stream buffer.
     package func snapshotAndStream() -> (
         snapshot: [TapeEntry], stream: AsyncStream<TapeEntry>
     ) {

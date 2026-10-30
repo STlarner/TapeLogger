@@ -108,8 +108,7 @@ struct LoggingDemoView: View {
     }
 }
 
-/// Keeps the label colors Apple's, but still answers a touch: `.plain`
-/// removes the pressed state and the row looks dead.
+/// Preserves label colors and adds a visible pressed background.
 private struct RowButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

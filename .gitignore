@@ -6,5 +6,5 @@ xcuserdata/
 *.xcodeproj
 *.xcworkspace
 
-# The demo app is part of the repo, unlike the package itself.
+# Track the demo's Xcode project while ignoring generated project files.
 !Demo/TapeDemo.xcodeproj/

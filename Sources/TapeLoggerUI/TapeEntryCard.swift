@@ -4,7 +4,7 @@ import TapeLogger
 /// One log = one rectangle, colored by key (falling back to level).
 ///
 /// The border and the header carry the color; the message stays in the text
-/// color so long payloads remain readable, unlike talker's all-colored card.
+/// color so long payloads remain readable.
 @MainActor
 public struct TapeEntryCard: View {
     /// Immutable content presented by this card.

@@ -6,7 +6,7 @@ public enum TapeConsoleTrigger: Sendable, Equatable {
     /// bottom bars. A docked arrow reveals the button on tap; tap again to open.
     /// Near either side it snaps halfway off-screen; dragging also reveals it.
     case button
-    /// Physical device shake. Useful on device, invisible in the UI.
+    /// Shake gesture, with no visible control in the UI.
     case shake
     /// Nothing is installed: present `TapeConsoleView` yourself.
     case none
@@ -16,8 +16,7 @@ public enum TapeConsoleTrigger: Sendable, Equatable {
     /// Forwards shake gestures from the responder chain to a closure.
     ///
     /// It lives as a zero-sized child of the hosting controller and asks to
-    /// become first responder, which is what makes `motionEnded` fire. The
-    /// gesture does not exist on Simulator: use a real device to test it.
+    /// become first responder, which is what makes `motionEnded` fire.
     struct TapeShakeDetector: UIViewControllerRepresentable {
         let onShake: () -> Void
 

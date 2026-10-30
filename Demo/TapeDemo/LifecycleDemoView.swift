@@ -22,8 +22,8 @@ struct LifecycleDemoView: View {
                     Text("App events come from TapeLifecycleAdapter. Scene "
                          + "events come from tapeSceneLifecycle on the app's "
                          + "root view and remain enabled independently.")
-                    Text("iOS does not guarantee a termination callback. "
-                         + "There is no automatic 'app closed' log.")
+                    Text("This adapter records foreground, background, active "
+                         + "and inactive events, not launch or termination.")
                 }
                 Section("Recent lifecycle entries") {
                     TimelineView(.periodic(from: .now, by: 1)) { _ in

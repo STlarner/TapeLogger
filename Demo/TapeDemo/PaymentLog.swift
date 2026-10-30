@@ -1,7 +1,6 @@
 import TapeLogger
 
-/// A custom log type, the talker-style way: header, level and badge are
-/// declared once, next to each other, and every call site stays short.
+/// A custom category with a shared severity, color and amount metadata.
 struct PaymentLog: TapeLog {
     let message: String
     let amount: Double?

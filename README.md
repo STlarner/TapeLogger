@@ -2,6 +2,9 @@
 
 Structured logging and an in-app console for Swift.
 
+Inspired by [Talker](https://pub.dev/packages/talker), the logging package for
+Flutter and Dart.
+
 Log from anywhere, then inspect entries in Xcode or directly in your app.
 Inspect a decoding error, check a request's headers and JSON body, or see which
 navigation event happened before an error—all in the same log history.
@@ -54,7 +57,7 @@ entries to console output or Apple's unified log; the UI and adapters are
 separate products.
 
 [Installation](#installation) · [Quick start](#quick-start) ·
-[Examples](#examples) · [Guide](docs/Guide.md)
+[Examples](#examples) · [Guide](https://stlarner.github.io/TapeLogger/api/documentation/tapelogger/usageguide)
 
 ## Installation
 
@@ -259,16 +262,16 @@ Xcode output (cropped for display):
 └──────────────────────────────────────────────────
 ```
 
-The same category color is used for the in-app card and terminal output.
-`TapeTheme` can override category colors across destinations without changing
-the log type or its call sites.
+The category color is used for the in-app card and ANSI terminal output.
+`TapeTheme` can override it without changing the log type or its call sites.
+Pass the same theme to each console view and console sink that should use it.
 
 ## Console presentation
 
 | Trigger | Behavior |
 | --- | --- |
 | `.button` | Draggable, dockable floating button |
-| `.shake` | Open with a physical-device shake gesture |
+| `.shake` | Shake gesture; in Simulator, choose **Device > Shake** |
 | `.none` | Present `TapeConsoleView()` from your own debug UI |
 
 Pass the trigger to `.tapeConsole(trigger:)`. Keep the modifier inside
@@ -287,13 +290,9 @@ example app, not an extra dependency in your project.
 
 ## Documentation
 
-- [Full API reference](https://stlarner.github.io/TapeLogger/api/)
 - [Configuration, themes and output destinations](https://stlarner.github.io/TapeLogger/api/documentation/tapelogger/usageguide)
 - [Console delivery, flushing and unified-log privacy](https://stlarner.github.io/TapeLogger/api/documentation/tapelogger/usageguide#Output-delivery-and-privacy)
 - [Adapter setup and supported capture scope](https://stlarner.github.io/TapeLogger/api/documentation/tapeloggeradapters)
-- [Documentation builds and contribution policy](docs/Documentation.md)
-- [Build, test and refresh the screenshots](docs/Screenshots.md)
-- [Roadmap](ROADMAP.md)
 
 ## License
 

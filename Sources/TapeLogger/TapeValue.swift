@@ -2,11 +2,10 @@ import Foundation
 
 /// Structured metadata value.
 ///
-/// Entries keep metadata structured instead of pre-formatting it to a
-/// string: the console can print it compactly while the UI can pretty
-/// print and filter on it.
+/// Entries retain typed metadata. Built-in destinations display compact text
+/// descriptions, and console search includes that text.
 ///
-/// Literal conformances make the call site pleasant:
+/// Metadata values can be supplied as literals:
 /// ```swift
 /// Tape.info("charged", metadata: ["amount": 19.99, "currency": "EUR", "retried": false])
 /// ```
@@ -53,7 +52,9 @@ public indirect enum TapeValue: Sendable, Hashable, CustomStringConvertible {
         }
     }
 
-    /// Foundation-compatible representation, used for JSON rendering in the UI.
+    /// Foundation-compatible representation for callers performing JSON
+    /// serialization. Validate the resulting object with `JSONSerialization`
+    /// before encoding; nonfinite doubles are not valid JSON numbers.
     public var jsonObject: Any {
         switch self {
         case .string(let value): value

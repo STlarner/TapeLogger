@@ -57,7 +57,7 @@ public struct TapeNetworkOptions: Sendable {
 ///
 /// There is one active network adapter per process. Only sessions configured
 /// with ``configure(_:)`` opt in; existing sessions are never modified.
-/// Uninstall stops new interceptions; in-flight requests finish normally.
+/// Uninstall stops new interceptions; in-flight requests retain their settings.
 ///
 /// The forwarding transport uses a standard URLSession configuration, not the
 /// caller's delegates or transport settings. Do not use for custom trust,

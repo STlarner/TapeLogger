@@ -1,11 +1,12 @@
 import Foundation
 
-/// A destination for log entries: console, unified log, file, remote...
+/// A destination for log entries.
 ///
-/// Contract: `record` must be cheap and must not block. I/O-heavy sinks
-/// buffer internally. It is called synchronously on the logging thread so
-/// ordering is preserved, and it is *always* called outside of any internal
-/// lock, so a sink is free to call back into `Tape`.
+/// `record` runs synchronously on the recording thread, outside the logger's
+/// locks. Buffer expensive work and synchronize mutable state for concurrent
+/// callers. Concurrent recordings may reach sinks in a different order from
+/// store history. A sink may call back into `Tape`; the logger's reentrancy
+/// guard suppresses recursive recording into the same logger.
 public protocol TapeSink: Sendable {
     /// Accepts an entry synchronously on the recording thread. Buffer expensive
     /// rendering or I/O internally, and synchronize state for concurrent callers.

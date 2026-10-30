@@ -18,12 +18,12 @@ public enum TapeTimeFormatter {
         return formatter
     }()
 
-    /// `21:30:31.584`
+    /// Formats local time as `HH:mm:ss.SSS`, such as `21:30:31.584`.
     public static func string(from date: Date) -> String {
         fullFormatter.string(from: date)
     }
 
-    /// `21:30:31`
+    /// Formats local time as `HH:mm:ss`, such as `21:30:31`.
     public static func shortString(from date: Date) -> String {
         shortFormatter.string(from: date)
     }

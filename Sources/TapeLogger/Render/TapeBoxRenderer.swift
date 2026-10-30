@@ -1,6 +1,6 @@
 import Foundation
 
-/// Talker-style box: one entry, one rectangle.
+/// Formats each entry as a colored text box with an open right edge.
 ///
 /// ```
 /// ┌────────────────────────────────────────────────────────────
@@ -9,19 +9,17 @@ import Foundation
 /// └────────────────────────────────────────────────────────────
 /// ```
 ///
-/// Every box is exactly as wide as `TapeConsoleCapabilities.maxWidth`, so a
-/// column of entries reads as a list instead of a ragged stack. Text that
-/// does not fit wraps onto the next row on a space boundary, keeping the
-/// gutter; a single word longer than the box is hard-broken.
+/// Top and bottom borders use `TapeConsoleCapabilities.maxWidth` display
+/// columns, with a minimum of 24. Content wraps within that budget without
+/// padding body rows. Text wraps at spaces; words wider than a row are
+/// hard-broken.
 ///
 /// The box stays open on the right because terminals disagree on some glyph
 /// widths. Wrapping budgets display columns, including wide text and emoji;
 /// the UI draws a real border instead.
 ///
-/// The level badge lives inside the header row, not before the border. An
-/// emoji glyph takes two terminal columns but counts as one `Character`, so
-/// prefixing the whole block shifts `┌` one column away from the `│` below
-/// it: the box stops lining up.
+/// The level badge is inside the header row so it does not shift the box's
+/// left border when displayed as a wide glyph.
 public struct TapeBoxRenderer: TapeTextRenderer {
     /// Whether the header includes the entry's short source location.
     public var showsSource: Bool
@@ -82,7 +80,7 @@ public struct TapeBoxRenderer: TapeTextRenderer {
         return block
     }
 
-    /// Narrowest box worth drawing. Below this the text is just noise.
+    /// Minimum display-column budget for borders and content.
     static let minimumWidth = 24
 
     /// Breaks `text` on spaces so that no row is wider than `width`.

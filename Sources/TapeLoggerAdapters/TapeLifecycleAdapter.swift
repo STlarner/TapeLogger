@@ -5,12 +5,12 @@ import UIKit
 
 /// Records app transitions, not individual window/scene transitions.
 ///
-/// No launch or termination is inferred: iOS can kill an app without sending
-/// a notification. Use `tapeSceneLifecycle` for a SwiftUI scene's state.
+/// Records foreground, background, active and inactive notifications, not launch
+/// or termination. Use `tapeSceneLifecycle` for a SwiftUI scene's state.
 ///
-    /// ```swift
-    /// let adapters = TapeAdapters()
-    /// let lifecycle = TapeLifecycleAdapter()
+/// ```swift
+/// let adapters = TapeAdapters()
+/// let lifecycle = TapeLifecycleAdapter()
 /// try adapters.install(lifecycle)
 /// ```
 @MainActor

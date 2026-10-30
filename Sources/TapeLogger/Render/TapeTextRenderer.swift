@@ -18,10 +18,8 @@ public struct TapeConsoleCapabilities: Sendable, Hashable {
 
     /// Selected console styling mode.
     public var mode: ColorMode
-    /// Width of the console box in display columns. Every box uses it, so a run
-    /// of entries lines up; longer text wraps instead of widening the box.
-    /// The default leaves room for the Xcode console, which is usually
-    /// narrower than a maximized terminal.
+    /// Requested display-column budget. The box renderer uses it for borders
+    /// and wrapping, with a minimum of 24 columns. Defaults to 77.
     public var maxWidth: Int
 
     /// Creates explicit capabilities without consulting the environment.
@@ -42,13 +40,9 @@ public struct TapeConsoleCapabilities: Sendable, Hashable {
     /// ANSI output with the default 77-column width.
     public static let ansi = TapeConsoleCapabilities(mode: .ansi)
 
-    /// ANSI only when stdout is a real terminal that is not the Xcode
-    /// console. Xcode runs the app behind a pseudo terminal, so `isatty`
-    /// returns true and `TERM` is set, but the console does not interpret
-    /// escape codes: emitting them prints raw `[38;5;75m` noise.
-    ///
-    /// When stdout *is* a terminal, its width caps `maxWidth`: a box wider
-    /// than the console would wrap and lose its alignment.
+    /// Detects styling from stdout attachment, `TERM` and Xcode environment
+    /// markers. Xcode markers select emoji output even when stdout is a terminal.
+    /// Reported terminal widths of at least 40 cap the default width of 77.
     ///
     /// - Parameter environment: Variables to inspect; defaults to the process
     ///   environment. Terminal attachment and dimensions still come from stdout.
@@ -91,9 +85,8 @@ public struct TapeConsoleCapabilities: Sendable, Hashable {
         return isXcodeConsole(environment: environment) ? .emoji : .ansi
     }
 
-    /// Xcode exports a handful of variables into the process it runs. They
-    /// are the only reliable signal: the console is a pty, exactly like a
-    /// terminal that does support ANSI.
+    /// Recognizes the configured Xcode environment markers. Terminal attachment
+    /// alone does not distinguish an Xcode console from an ANSI terminal.
     static func isXcodeConsole(
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> Bool {
